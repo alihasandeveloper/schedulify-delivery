@@ -320,7 +320,7 @@ class Schedulify_DB {
             'districts'             => $districts,
             'delay_hours'           => $delay_hours,
             'off_days'              => $off_days,
-            'disabled_date_ranges'  => $disabled_ranges ?? $disabled_date_ranges,
+            'disabled_date_ranges'  => $disabled_date_ranges,
             'blackout_dates'        => $blackout_dates,
             'allowed_dates'         => $allowed_dates,
             'methods'               => $methods_serialized,

@@ -225,7 +225,7 @@ class Schedulify_Checkout {
     private $has_rendered = false;
 
     public function enqueue_checkout_assets() {
-        if (!is_checkout() && !is_account_page() && !is_order_received_page()) {
+        if (!is_checkout() && !is_order_received_page()) {
             return;
         }
 
@@ -430,7 +430,7 @@ class Schedulify_Checkout {
             $calc = new Schedulify_Matrix_Calculator($active_rule);
             $matrix = $calc->get_delivery_availability_matrix();
 
-            if (isset($matrix['standard'][$delivery_date]) && false === $matrix['standard'][$delivery_date]) {
+            if (!isset($matrix['standard'][$delivery_date]) || false === $matrix['standard'][$delivery_date]) {
                 if (!empty($active_rule['delay_hours']) && $delivery_date < ($matrix['earliest_allowed_ymd'] ?? $today_str)) {
                     return sprintf(
                         __('Deliveries to your zone require at least %d hours advance preparation. Please select a date on or after %s.', 'schedulify-delivery'),

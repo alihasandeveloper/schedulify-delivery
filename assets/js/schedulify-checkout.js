@@ -632,24 +632,23 @@
             }
         }, 300);
 
+        // Debounce timer for district/method change events
+        let ruleRefreshTimer = null;
+        function debouncedRefreshCalendarRules() {
+            clearTimeout(ruleRefreshTimer);
+            ruleRefreshTimer = setTimeout(function () {
+                refreshCalendarRules();
+            }, 200);
+        }
+
         // Listen for district / state / city changes on checkout (both Classic and Block Checkout)
         $(document).on('change input select', '#billing_state, #shipping_state, #billing_city, #shipping_city, select[id*="state"], select[id*="district"], input[id*="state"], input[id*="district"], select[name*="state"], select[name*="district"], input[name*="state"], input[name*="district"], .wc-block-components-state-input select, .wc-block-components-state-input input, .wc-block-components-combobox input, .wc-block-components-combobox__input', function () {
-            setTimeout(function () {
-                refreshCalendarRules();
-            }, 50);
-            setTimeout(function () {
-                refreshCalendarRules();
-            }, 250);
+            debouncedRefreshCalendarRules();
         });
 
         // Listen for shipping method changes on checkout (both Classic and Block Checkout)
         $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"], .wc-block-components-radio-control, .wc-block-components-radio-control__option, .wc-block-components-radio-control__label, [data-block-name="woocommerce/checkout-shipping-methods-block"]', function () {
-            setTimeout(function () {
-                refreshCalendarRules();
-            }, 50);
-            setTimeout(function () {
-                refreshCalendarRules();
-            }, 250);
+            debouncedRefreshCalendarRules();
         });
 
         // Subscribe to WooCommerce Gutenberg Blocks store state changes
