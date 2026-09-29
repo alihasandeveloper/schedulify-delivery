@@ -554,7 +554,7 @@
             for (let sel of paymentSelectors) {
                 const $found = $(sel);
                 if ($found.length) {
-                    const $panel = $found.closest('.wc-block-components-panel, .wp-block-woocommerce-checkout-payment-block, fieldset, form') || $found.first();
+                    const $panel = $found.closest('.wc-block-components-panel, .wp-block-woocommerce-checkout-payment-block, fieldset, form');
                     $target = $panel.length ? $panel : $found.first();
                     method = 'insertBefore';
                     break;
