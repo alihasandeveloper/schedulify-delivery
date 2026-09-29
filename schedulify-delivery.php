@@ -61,18 +61,28 @@ final class Schedulify_Delivery {
 
     private function init_hooks() {
         add_action('plugins_loaded', [$this, 'on_plugins_loaded']);
+        add_action('plugins_loaded', [$this, 'check_db_updates'], 5); // Run before on_plugins_loaded (priority 5)
         add_action('init', [$this, 'load_textdomain']);
-        add_action('admin_init', [$this, 'check_db_updates']);
         register_activation_hook(SCHEDULIFY_PLUGIN_FILE, [$this, 'activate']);
     }
 
     public function check_db_updates() {
-        if (class_exists('Schedulify_DB')) {
-            $db_ver = get_option('schedulify_db_version', '1.0.0');
-            if (version_compare($db_ver, '1.1.0', '<')) {
-                Schedulify_DB::create_tables();
-                update_option('schedulify_db_version', '1.1.0');
-            }
+        // Static guard: run only once per request
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+
+        if (!class_exists('Schedulify_DB')) {
+            return;
+        }
+
+        $current_db_version = '1.1.0';
+        $db_ver = get_option('schedulify_db_version', '0.0.0');
+        if (version_compare($db_ver, $current_db_version, '<')) {
+            Schedulify_DB::create_tables();
+            update_option('schedulify_db_version', $current_db_version);
         }
     }
 

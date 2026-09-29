@@ -24,11 +24,11 @@ if ($delete_data) {
     $tables = [
         $wpdb->prefix . 'schedulify_zone_rules',
         $wpdb->prefix . 'schedulify_settings',
-        $wpdb->prefix . 'schedulify_zone_rules',
-        $wpdb->prefix . 'schedulify_settings',
     ];
 
     foreach ($tables as $table) {
-        $wpdb->query("DROP TABLE IF EXISTS {$table}");
+        $wpdb->query("DROP TABLE IF EXISTS `{$table}`");
     }
+
+    delete_option('schedulify_db_version');
 }
