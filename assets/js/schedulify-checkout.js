@@ -41,32 +41,100 @@
     }
 
     /**
+     * Helper: Normalize District Code from code or name (e.g. "Barishal" -> "BD-06")
+     */
+    function normalizeDistrictCode(raw) {
+        if (!raw) return '';
+        const clean = String(raw).trim();
+        if (!clean) return '';
+
+        // Standard BD-XX format
+        if (/^BD-\d{2}$/i.test(clean)) {
+            return clean.toUpperCase();
+        }
+
+        // Numeric string (e.g. "6" -> "BD-06")
+        if (/^\d{1,2}$/.test(clean)) {
+            return 'BD-' + clean.padStart(2, '0');
+        }
+
+        // Lookup in all_districts dictionary
+        const districts = (typeof schedulifyData !== 'undefined' && schedulifyData.all_districts) ? schedulifyData.all_districts : {};
+        const lowerClean = clean.toLowerCase();
+
+        for (let code in districts) {
+            if (code.toLowerCase() === lowerClean) {
+                return code;
+            }
+            const name = String(districts[code]);
+            const plainName = name.replace(/\s*\(.*?\)\s*/g, '').trim().toLowerCase();
+            if (plainName === lowerClean || name.toLowerCase() === lowerClean || lowerClean.includes(plainName) || plainName.includes(lowerClean)) {
+                return code;
+            }
+        }
+
+        return clean;
+    }
+
+    /**
      * Helper: Detect current district code from checkout form
      */
     function detectCurrentDistrictCode() {
-        const $shipState = $('#shipping_state:visible');
-        const $billState = $('#billing_state');
-        let stateCode = '';
+        let raw = '';
+
+        // 1. Classic Checkout inputs / selects
+        const $shipState = $('#shipping_state:visible, #shipping_state');
+        const $billState = $('#billing_state:visible, #billing_state');
+        const $shipCity  = $('#shipping_city:visible, #shipping_city');
+        const $billCity  = $('#billing_city:visible, #billing_city');
 
         if ($shipState.length && $shipState.val()) {
-            stateCode = $shipState.val();
+            raw = $shipState.val();
         } else if ($billState.length && $billState.val()) {
-            stateCode = $billState.val();
+            raw = $billState.val();
+        } else if ($shipCity.length && $shipCity.val()) {
+            raw = $shipCity.val();
+        } else if ($billCity.length && $billCity.val()) {
+            raw = $billCity.val();
         }
 
-        // Block checkout store check
-        if (!stateCode && window.wp && window.wp.data) {
+        // 2. Block Checkout DOM inputs & comboboxes
+        if (!raw) {
+            const $blockElements = $('select[id*="state"], select[id*="district"], select[name*="state"], select[name*="district"], input[id*="state"], input[id*="district"], .wc-block-components-state-input select, .wc-block-components-state-input input, .wc-block-components-combobox input, .wc-block-components-combobox__input');
+            if ($blockElements.length) {
+                for (let i = 0; i < $blockElements.length; i++) {
+                    const val = $($blockElements[i]).val();
+                    if (val && String(val).trim()) {
+                        raw = String(val).trim();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. Block checkout store check (wp.data wc/store/cart)
+        if (!raw && window.wp && window.wp.data) {
             try {
-                const cart = window.wp.data.select('wc/store/cart').getCartData();
-                if (cart && cart.shippingAddress && cart.shippingAddress.state) {
-                    stateCode = cart.shippingAddress.state;
-                } else if (cart && cart.billingAddress && cart.billingAddress.state) {
-                    stateCode = cart.billingAddress.state;
+                const cartStore = window.wp.data.select('wc/store/cart');
+                if (cartStore) {
+                    const cart = typeof cartStore.getCartData === 'function' ? cartStore.getCartData() : null;
+                    const customer = typeof cartStore.getCustomerData === 'function' ? cartStore.getCustomerData() : null;
+
+                    raw = (customer && customer.shippingAddress && customer.shippingAddress.state) ||
+                          (customer && customer.billingAddress && customer.billingAddress.state) ||
+                          (cart && cart.shippingAddress && cart.shippingAddress.state) ||
+                          (cart && cart.billingAddress && cart.billingAddress.state) ||
+                          (customer && customer.shippingAddress && customer.shippingAddress.city) ||
+                          (cart && cart.shippingAddress && cart.shippingAddress.city) || '';
                 }
             } catch (e) { }
         }
 
-        return stateCode || active_district_code || '';
+        if (!raw) {
+            raw = active_district_code || '';
+        }
+
+        return normalizeDistrictCode(raw);
     }
 
     /**
@@ -564,9 +632,14 @@
             }
         }, 300);
 
-        // Listen for district / state / city changes on checkout
-        $(document).on('change', '#billing_state, #shipping_state, #billing_city, #shipping_city', function () {
-            refreshCalendarRules();
+        // Listen for district / state / city changes on checkout (both Classic and Block Checkout)
+        $(document).on('change input select', '#billing_state, #shipping_state, #billing_city, #shipping_city, select[id*="state"], select[id*="district"], input[id*="state"], input[id*="district"], select[name*="state"], select[name*="district"], input[name*="state"], input[name*="district"], .wc-block-components-state-input select, .wc-block-components-state-input input, .wc-block-components-combobox input, .wc-block-components-combobox__input', function () {
+            setTimeout(function () {
+                refreshCalendarRules();
+            }, 50);
+            setTimeout(function () {
+                refreshCalendarRules();
+            }, 250);
         });
 
         // Listen for shipping method changes on checkout (both Classic and Block Checkout)

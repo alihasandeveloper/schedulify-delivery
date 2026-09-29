@@ -248,18 +248,21 @@ class Schedulify_Checkout {
         );
 
         // Enqueue Checkout plugin assets
+        $js_ver = file_exists(SCHEDULIFY_PLUGIN_DIR . 'assets/js/schedulify-checkout.js') ? filemtime(SCHEDULIFY_PLUGIN_DIR . 'assets/js/schedulify-checkout.js') : time();
+        $css_ver = file_exists(SCHEDULIFY_PLUGIN_DIR . 'assets/css/schedulify-checkout.css') ? filemtime(SCHEDULIFY_PLUGIN_DIR . 'assets/css/schedulify-checkout.css') : time();
+
         wp_enqueue_style(
             'schedulify-checkout-css',
             SCHEDULIFY_PLUGIN_URL . 'assets/css/schedulify-checkout.css',
             ['schedulify-flatpickr-css'],
-            time()
+            $css_ver
         );
 
         wp_enqueue_script(
             'schedulify-checkout-js',
             SCHEDULIFY_PLUGIN_URL . 'assets/js/schedulify-checkout.js',
             ['jquery', 'schedulify-flatpickr-js', 'wp-api-fetch', 'wp-data'],
-            SCHEDULIFY_VERSION,
+            $js_ver,
             true
         );
 
@@ -297,6 +300,7 @@ class Schedulify_Checkout {
             'active_district_code'  => $active_district_code,
             'active_rule'           => $active_rule,
             'district_to_rule_map'  => $district_to_rule_map,
+            'all_districts'         => Schedulify_Settings::get_bangladesh_districts(),
             'zone_rules'            => $zone_rules,
             'matrices'              => $all_matrices,
             'serverTime'            => [
