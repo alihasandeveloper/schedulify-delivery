@@ -1,0 +1,315 @@
+/**
+ * Schedulify Delivery - Checkout Styles
+ * Sleek, modern, and mobile-first design for WooCommerce Checkout
+ */
+
+.schedulify-scheduler-card,
+.schedulify-scheduler-card *,
+.schedulify-scheduler-card input,
+.schedulify-scheduler-card button,
+.schedulify-scheduler-card select,
+.schedulify-scheduler-card textarea,
+.schedulify-scheduler-card label,
+.schedulify-scheduler-card span,
+.schedulify-scheduler-card p,
+.schedulify-scheduler-card h3 {
+    font-family: inherit !important;
+}
+
+.schedulify-scheduler-card {
+    margin: 25px 0 30px;
+}
+
+/* Form Groups */
+.schedulify-form-group {
+    margin-bottom: 20px;
+}
+
+.schedulify-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.schedulify-group-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #040000;
+    margin-bottom: 8px;
+}
+
+.schedulify-group-label .required {
+    color: #ef4444;
+}
+
+/* Datepicker container */
+.schedulify-input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.schedulify-calendar-input {
+    width: 100% !important;
+    padding: 12px 42px 12px 14px !important;
+    border: 1px solid color-mix(in srgb, currentColor 80%, transparent);
+    border-radius: 4px !important;
+    font-size: 14px !important;
+    color: #040000 !important;
+    background-color: #FFFFFF80 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.schedulify-calendar-input:focus {
+    outline: none !important;
+}
+
+.schedulify-input-calendar-icon {
+    position: absolute;
+    right: 14px;
+    color: #040000;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+}
+
+/* Flatpickr Custom Aesthetic Overrides - Checkout Theme Matched */
+.flatpickr-calendar,
+.flatpickr-calendar *,
+.flatpickr-month,
+.flatpickr-current-month,
+.flatpickr-current-month span.cur-month,
+.flatpickr-current-month input.cur-year,
+.flatpickr-weekdays,
+span.flatpickr-weekday,
+.flatpickr-days,
+.dayContainer,
+.flatpickr-day {
+    font-family: inherit !important;
+}
+
+.flatpickr-calendar {
+    background: #ffffff !important;
+    border: 1px solid #E5DBD3 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 12px 30px rgba(43, 45, 47, 0.12) !important;
+    color: #040000 !important;
+    z-index: 999999 !important;
+    animation: none !important;
+    transform: none !important;
+}
+
+.flatpickr-calendar.arrowTop:before {
+    border-bottom-color: #E5DBD3 !important;
+}
+
+.flatpickr-calendar.arrowTop:after {
+    border-bottom-color: #ffffff !important;
+}
+
+.flatpickr-calendar.arrowBottom:before {
+    border-top-color: #E5DBD3 !important;
+}
+
+.flatpickr-calendar.arrowBottom:after {
+    border-top-color: #ffffff !important;
+}
+
+.flatpickr-months {
+    border-bottom: 1px solid #E5DBD3 !important;
+    background: transparent !important;
+}
+
+.flatpickr-months .flatpickr-month {
+    color: #040000 !important;
+    fill: #040000 !important;
+    background: transparent !important;
+}
+
+.flatpickr-current-month {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #040000 !important;
+}
+
+.flatpickr-current-month .cur-month {
+    font-weight: 700 !important;
+    color: #040000 !important;
+}
+
+.flatpickr-current-month input.cur-year {
+    font-weight: 700 !important;
+    color: #040000 !important;
+}
+
+.flatpickr-current-month .numInputWrapper span.arrowUp:after {
+    border-bottom-color: #040000 !important;
+}
+
+.flatpickr-current-month .numInputWrapper span.arrowDown:after {
+    border-top-color: #040000 !important;
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+    fill: #040000 !important;
+    color: #040000 !important;
+}
+
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+    fill: #040000 !important;
+}
+
+span.flatpickr-weekday {
+    color: #8c7e75 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+.flatpickr-day {
+    color: #040000 !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+    border: 1px solid transparent !important;
+    transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+.flatpickr-day:hover,
+.flatpickr-day:focus {
+    background: #f5efe9 !important;
+    border-color: #E5DBD3 !important;
+    color: #040000 !important;
+}
+
+.flatpickr-day.today {
+    border-color: currentColor !important;
+    font-weight: 700 !important;
+}
+
+.flatpickr-day.today:hover {
+    background: #f5efe9 !important;
+    border-color: currentColor !important;
+    color: #040000 !important;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: #661716 !important;
+    border-color: #661716 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.flatpickr-day.selected:hover,
+.flatpickr-day.selected:focus {
+    background: #1a1c1d !important;
+    border-color: #1a1c1d !important;
+    color: #ffffff !important;
+}
+
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+    color: #cfc5bb !important;
+    text-decoration: line-through !important;
+    opacity: 0.45 !important;
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Customer Order Details Box (Thank You & My Account) */
+.schedulify-customer-delivery-box {
+    margin: 25px 0 30px !important;
+    border-radius: 4px !important;
+    font-family: inherit !important;
+    color: #040000 !important;
+    border: 1px solid var(--wc-separator-color, color-mix(in srgb, currentColor 20%, transparent));
+}
+
+.schedulify-customer-delivery-box *,
+.schedulify-customer-delivery-box table,
+.schedulify-customer-delivery-box th,
+.schedulify-customer-delivery-box td,
+.schedulify-customer-delivery-box h2 {
+    font-family: inherit !important;
+}
+
+.schedulify-customer-delivery-box .woocommerce-column__title {
+    margin: 0 !important;
+    padding: 16px;
+    border-bottom: 1px solid var(--wc-separator-color, color-mix(in srgb, currentColor 20%, transparent));
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #040000 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.schedulify-customer-delivery-box table.shop_table {
+    width: 100% !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.schedulify-customer-delivery-box table tbody tr,
+.schedulify-customer-delivery-box table tr {
+    border: none !important;
+    background: transparent !important;
+}
+
+.schedulify-customer-delivery-box table th {
+    padding: 16px;
+    border: none !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    width: 35% !important;
+    background: transparent !important;
+}
+
+.schedulify-customer-delivery-box table td {
+    padding: 16px;
+    border: none !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #040000 !important;
+    background: transparent !important;
+    text-align: right;
+}
+
+.schedulify-customer-delivery-box .schedulify-order-date-value {
+    font-weight: 500 !important;
+    color: #040000 !important;
+}
+
+.schedulify-customer-delivery-box .schedulify-order-slot-value {
+    color: #040000 !important;
+}
+
+/* Shipping Method Cut-off & Disabled State */
+.schedulify-shipping-method-disabled,
+.schedulify-shipping-method-disabled.wc-block-components-radio-control--checked,
+.schedulify-shipping-method-disabled.is-checked,
+.schedulify-shipping-method-disabled.is-active,
+.schedulify-shipping-method-disabled:focus,
+.schedulify-shipping-method-disabled:active,
+.schedulify-shipping-method-disabled:hover {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    border-color: #e5e7eb !important;
+    background-color: #f9fafb !important;
+    box-shadow: none !important;
+    outline: none !important;
+    pointer-events: none !important;
+}
+
+.schedulify-shipping-method-disabled * {
+    cursor: not-allowed !important;
+}
+
+.schedulify-shipping-method-disabled input[type="radio"] {
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}

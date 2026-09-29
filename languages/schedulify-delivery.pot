@@ -1,0 +1,59 @@
+# Copyright (C) 2026 BoomDevs
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Schedulify Delivery 1.0.0\n"
+"Report-Msgid-Bugs-To: https://boomdevs.com/\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-09-29T11:17:00+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.10.0\n"
+"X-Domain: schedulify-delivery\n"
+
+#. Plugin Name of the plugin
+msgid "Schedulify Delivery – WooCommerce Zone Delivery Date & Schedule Matrix"
+msgstr ""
+
+#. Plugin URI of the plugin
+msgid "https://boomdevs.com/plugins/schedulify-delivery/"
+msgstr ""
+
+#. Description of the plugin
+msgid "Advanced delivery date scheduler for WooCommerce with zone-specific delivery matrix rules, cut-off delay hours, weekly off-days, and custom holiday blackout controls."
+msgstr ""
+
+#. Author of the plugin
+msgid "BoomDevs"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://boomdevs.com/"
+msgstr ""
+
+#: includes/class-schedulify-settings.php
+msgid "Delivery Scheduler"
+msgstr ""
+
+#: includes/class-schedulify-settings.php
+msgid "Schedulify Delivery Settings"
+msgstr ""
+
+#: includes/class-schedulify-settings.php
+msgid "General Settings"
+msgstr ""
+
+#: includes/class-schedulify-settings.php
+msgid "Zone Settings"
+msgstr ""
+
+#: includes/class-schedulify-checkout.php
+msgid "Delivery Date"
+msgstr ""
+
+#: includes/class-schedulify-checkout.php
+msgid "Delivery Schedule"
+msgstr ""
