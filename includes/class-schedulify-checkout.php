@@ -237,6 +237,11 @@ class Schedulify_Checkout {
             return;
         }
 
+        // Always clear stale delivery session on fresh checkout page load
+        if (function_exists('WC') && WC()->session && !wp_doing_ajax() && !is_admin()) {
+            WC()->session->__unset('schedulify_delivery_data');
+        }
+
         $settings = Schedulify_Settings::get_settings();
 
         // Enqueue Flatpickr Vendor files
@@ -345,9 +350,18 @@ class Schedulify_Checkout {
             wp_send_json_error(['message' => 'No session']);
         }
 
+        $date  = sanitize_text_field($_POST['date'] ?? '');
+        $notes = sanitize_text_field($_POST['notes'] ?? '');
+
+        if (empty($date)) {
+            WC()->session->__unset('schedulify_delivery_data');
+            wp_send_json_success(['date' => '', 'notes' => '']);
+            return;
+        }
+
         $data = [
-            'date'  => sanitize_text_field($_POST['date'] ?? ''),
-            'notes' => sanitize_text_field($_POST['notes'] ?? ''),
+            'date'  => $date,
+            'notes' => $notes,
         ];
 
         WC()->session->set('schedulify_delivery_data', $data);

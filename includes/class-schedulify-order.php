@@ -49,11 +49,11 @@ class Schedulify_Order {
             if (!empty($delivery_data['notes'])) {
                 $order->update_meta_data('_schedulify_delivery_notes', $delivery_data['notes']);
             }
+        }
 
-            // Clear session after saving
-            if (function_exists('WC') && WC()->session) {
-                WC()->session->__unset('schedulify_delivery_data');
-            }
+        // Always clear session after order creation to prevent ghost dates on future checkouts
+        if (function_exists('WC') && WC()->session) {
+            WC()->session->__unset('schedulify_delivery_data');
         }
     }
 

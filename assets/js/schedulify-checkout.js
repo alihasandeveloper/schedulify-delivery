@@ -690,6 +690,8 @@
                 if (dateStr) {
                     userSelectedDate = dateStr;
                     $('#schedulify_delivery_date').val(dateStr);
+                    $('.schedulify-validation-error').removeClass('schedulify-validation-error');
+                    $('.schedulify-date-error-notice').remove();
                     syncWithSession();
                 } else {
                     userSelectedDate = null;
@@ -706,11 +708,6 @@
         flatpickrInstance = flatpickr(inputEl, flatpickrConfig);
 
         updateDeliveryFieldState();
-
-        if (targetDate && isShippingAvailable()) {
-            $('#schedulify_delivery_date').val(targetDate);
-            syncWithSession();
-        }
     }
 
     /**
@@ -950,6 +947,42 @@
             mountToBlockCheckout();
             debouncedRefreshCalendarRules();
         });
+
+        // Intercept Place Order button click to validate Delivery Date
+        $(document).on('click', '.wc-block-components-checkout-place-order-button, button#place_order, .wc-block-checkout__actions button', function (e) {
+            const isRequired = (settings && settings.required !== undefined) ? settings.required : true;
+            if (!isRequired) {
+                return;
+            }
+
+            const chosenDate = $('#schedulify_delivery_date').val() || userSelectedDate || '';
+            if (!chosenDate) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                const $scheduler = $('#schedulify-delivery-scheduler-wrapper');
+                $scheduler.find('.schedulify-calendar-input, input').addClass('schedulify-validation-error');
+
+                $('.schedulify-date-error-notice').remove();
+                const noticeHtml = '<div class="schedulify-error-notice schedulify-date-error-notice" style="margin-top:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> <span>' + (i18n.selectDate || 'Please select a delivery date for your order.') + '</span></div>';
+                
+                $scheduler.after(noticeHtml);
+
+                if ($scheduler.length) {
+                    $('html, body').animate({
+                        scrollTop: $scheduler.offset().top - 100
+                    }, 350);
+
+                    if (flatpickrInstance) {
+                        setTimeout(function () {
+                            flatpickrInstance.open();
+                        }, 400);
+                    }
+                }
+                return false;
+            }
+        });
     });
 
 })(jQuery);
+

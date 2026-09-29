@@ -1,224 +1,139 @@
 /**
  * Schedulify Multi-Step Checkout Styles
- * Version: 1.0.0
+ * Version: 3.0.0
  */
 
 :root {
-    --schedulify-primary: #4f46e5;
-    --schedulify-primary-hover: #4338ca;
-    --schedulify-primary-light: #eef2ff;
+    --schedulify-primary: #3b82f6;
+    --schedulify-primary-hover: #2563eb;
+    --schedulify-primary-light: #eff6ff;
     --schedulify-success: #10b981;
     --schedulify-danger: #ef4444;
-    --schedulify-text-main: #1f2937;
+    --schedulify-text-main: #111827;
     --schedulify-text-muted: #6b7280;
     --schedulify-border-color: #e5e7eb;
     --schedulify-bg-gray: #f9fafb;
-    --schedulify-radius: 10px;
-    --schedulify-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.06);
+    --schedulify-radius: 8px;
 }
 
 /* ==========================================================================
-   1. Multi-Step Wizard Header Progress Bar
+   1. Block Checkout Step Visibility Control (Foolproof CSS Isolation)
    ========================================================================== */
-.schedulify-multistep-wizard {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #ffffff;
-    border: 1px solid var(--schedulify-border-color);
-    border-radius: var(--schedulify-radius);
-    padding: 16px 24px;
-    margin-bottom: 30px;
-    box-shadow: var(--schedulify-shadow);
-    user-select: none;
+
+/* --- STEP 1 ACTIVE: Strictly HIDE all Step 2 elements --- */
+body.schedulify-step-1-active fieldset.wc-block-checkout__shipping-options,
+body.schedulify-step-1-active .wc-block-checkout__shipping-option,
+body.schedulify-step-1-active .wc-block-checkout__shipping-methods,
+body.schedulify-step-1-active .wc-block-components-shipping-rates-control,
+body.schedulify-step-1-active [data-block-name*="shipping-methods"],
+body.schedulify-step-1-active [data-block-name*="shipping-method"],
+body.schedulify-step-1-active .wp-block-woocommerce-checkout-shipping-methods-block,
+body.schedulify-step-1-active .wp-block-woocommerce-checkout-shipping-method-block,
+body.schedulify-step-1-active #schedulify-delivery-scheduler-wrapper,
+body.schedulify-step-1-active #schedulify-block-fallback-container,
+body.schedulify-step-1-active #schedulify-delivery-field-container,
+body.schedulify-step-1-active .schedulify-checkout-field-container,
+body.schedulify-step-1-active fieldset.wc-block-checkout__payment-methods,
+body.schedulify-step-1-active .wc-block-checkout__payment-methods,
+body.schedulify-step-1-active .wc-block-components-checkout-payment-methods-block,
+body.schedulify-step-1-active [data-block-name*="payment"],
+body.schedulify-step-1-active .wp-block-woocommerce-checkout-payment-block,
+body.schedulify-step-1-active .wp-block-woocommerce-checkout-payment-methods-block,
+body.schedulify-step-1-active .wc-block-checkout__actions,
+body.schedulify-step-1-active .wc-block-components-checkout-place-order-button,
+body.schedulify-step-1-active [data-block-name*="actions"],
+body.schedulify-step-1-active .wp-block-woocommerce-checkout-actions-block,
+body.schedulify-step-1-active #schedulify-block-back-top-container,
+body.schedulify-step-1-active .schedulify-step-2-only {
+    display: none !important;
 }
 
-.schedulify-wizard-step {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    position: relative;
+/* --- STEP 2 ACTIVE: Strictly HIDE all Step 1 elements --- */
+body.schedulify-step-2-active .wc-block-checkout__contact-information,
+body.schedulify-step-2-active .wc-block-components-checkout-contact-information-block,
+body.schedulify-step-2-active [data-block-name*="contact-information"],
+body.schedulify-step-2-active .wp-block-woocommerce-checkout-contact-information-block,
+body.schedulify-step-2-active .wc-block-checkout__shipping-fields,
+body.schedulify-step-2-active .wc-block-components-checkout-shipping-address-block,
+body.schedulify-step-2-active [data-block-name*="shipping-address"],
+body.schedulify-step-2-active .wp-block-woocommerce-checkout-shipping-address-block,
+body.schedulify-step-2-active fieldset.wc-block-checkout__shipping-fields,
+body.schedulify-step-2-active .wc-block-checkout__billing-fields,
+body.schedulify-step-2-active .wc-block-components-checkout-billing-address-block,
+body.schedulify-step-2-active [data-block-name*="billing-address"],
+body.schedulify-step-2-active .wp-block-woocommerce-checkout-billing-address-block,
+body.schedulify-step-2-active fieldset.wc-block-checkout__billing-fields,
+body.schedulify-step-2-active .wc-block-checkout__additional-fields,
+body.schedulify-step-2-active .wc-block-components-checkout-additional-fields-block,
+body.schedulify-step-2-active [data-block-name*="additional-fields"],
+body.schedulify-step-2-active [data-block-name*="order-notes"],
+body.schedulify-step-2-active .wp-block-woocommerce-checkout-additional-fields-block,
+body.schedulify-step-2-active #schedulify-block-next-container,
+body.schedulify-step-2-active .schedulify-step-1-only {
+    display: none !important;
 }
 
-.schedulify-step-badge {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background-color: var(--schedulify-bg-gray);
-    border: 2px solid var(--schedulify-border-color);
-    color: var(--schedulify-text-muted);
-    font-weight: 700;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-}
-
-.schedulify-step-badge .schedulify-step-icon {
-    display: none;
-    line-height: 1;
-}
-
-.schedulify-step-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.schedulify-step-subtitle {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--schedulify-text-muted);
-}
-
-.schedulify-step-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--schedulify-text-main);
-    line-height: 1.3;
-}
-
-/* Active Step */
-.schedulify-wizard-step.active .schedulify-step-badge {
-    background-color: var(--schedulify-primary);
-    border-color: var(--schedulify-primary);
-    color: #ffffff;
-    box-shadow: 0 0 0 4px var(--schedulify-primary-light);
-}
-
-.schedulify-wizard-step.active .schedulify-step-title {
-    color: var(--schedulify-primary);
-}
-
-/* Completed Step */
-.schedulify-wizard-step.completed .schedulify-step-badge {
-    background-color: var(--schedulify-success);
-    border-color: var(--schedulify-success);
-    color: #ffffff;
-}
-
-.schedulify-wizard-step.completed .schedulify-step-badge .schedulify-step-num {
-    display: none;
-}
-
-.schedulify-wizard-step.completed .schedulify-step-badge .schedulify-step-icon {
-    display: inline-flex;
-}
-
-/* Divider Line */
-.schedulify-wizard-divider {
-    flex: 1;
-    margin: 0 20px;
-    display: flex;
-    align-items: center;
-}
-
-.schedulify-divider-line {
-    width: 100%;
-    height: 2px;
-    background-color: var(--schedulify-border-color);
-    position: relative;
-    border-radius: 2px;
-}
-
-.schedulify-multistep-wizard.step-2-active .schedulify-divider-line {
-    background-color: var(--schedulify-success);
-    transition: background-color 0.4s ease;
+/* Fallback helpers */
+.schedulify-block-hidden,
+.schedulify-is-hidden {
+    display: none !important;
 }
 
 /* ==========================================================================
-   2. Step Content Wrappers
-   ========================================================================== */
-.schedulify-step-content {
-    display: none;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.schedulify-step-content.active {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* ==========================================================================
-   3. Action & Navigation Buttons
+   2. Action Buttons & Top Back Button
    ========================================================================== */
 .schedulify-step-actions {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid var(--schedulify-border-color);
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-}
-
-.schedulify-step-1-actions {
-    justify-content: flex-end;
+    margin-top: 24px;
+    margin-bottom: 24px;
 }
 
 .schedulify-step-top-nav {
-    margin-bottom: 22px;
+    margin-top: 4px;
+    margin-bottom: 24px;
 }
 
+/* Next & Back Buttons */
 .schedulify-btn-next,
+.schedulify-btn-back,
 .schedulify-btn {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 10px !important;
-    background-color: var(--schedulify-primary) !important;
+    gap: 8px !important;
     color: #ffffff !important;
     font-size: 16px !important;
-    font-weight: 600 !important;
-    padding: 14px 28px !important;
-    border-radius: 8px !important;
+    font-weight: 400 !important;
+    padding: 16px 20px !important;
     border: none !important;
     cursor: pointer !important;
     transition: all 0.2s ease-in-out !important;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
     text-decoration: none !important;
+    background: #661716 !important;
+    font-family: inherit !important;
+    line-height: 1.2 !important;
 }
 
 .schedulify-btn-next:hover,
-.schedulify-btn:hover {
-    background-color: var(--schedulify-primary-hover) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+.schedulify-btn:hover,
+.schedulify-btn-back:hover {
+    background-color: #d07126 !important;
+    color: #ffffff !important;
 }
 
-.schedulify-btn-secondary,
+
 .schedulify-btn-back-link {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: transparent;
-    color: var(--schedulify-text-muted);
+    border: none;
+    color: var(--schedulify-primary);
     font-size: 14px;
     font-weight: 600;
-    border: 1px solid var(--schedulify-border-color);
-    padding: 10px 18px;
-    border-radius: 6px;
     cursor: pointer;
+    padding: 6px 0;
     transition: all 0.2s ease;
     text-decoration: none;
-}
-
-.schedulify-btn-back-link {
-    border: none;
-    padding: 6px 0;
-    color: var(--schedulify-primary);
-}
-
-.schedulify-btn-secondary:hover {
-    background-color: var(--schedulify-bg-gray);
-    color: var(--schedulify-text-main);
-    border-color: #d1d5db;
 }
 
 .schedulify-btn-back-link:hover {
@@ -227,12 +142,28 @@
 }
 
 /* ==========================================================================
+   3. Classic Checkout Specifics
+   ========================================================================== */
+.schedulify-step-content {
+    display: none;
+}
+
+.schedulify-step-content.active {
+    display: block;
+}
+
+/* ==========================================================================
    4. Validation Errors Highlighting
    ========================================================================== */
-.schedulify-validation-error {
+.schedulify-validation-error,
+.wc-block-components-combobox.schedulify-validation-error input,
+.wc-block-components-combobox.schedulify-validation-error,
+.wc-block-components-state-input.schedulify-validation-error select,
+.wc-block-components-text-input.schedulify-validation-error input {
     border-color: var(--schedulify-danger) !important;
     background-color: #fff8f8 !important;
-    animation: schedulify-shake 0.3s ease-in-out;
+    outline: 1.5px solid var(--schedulify-danger) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
 }
 
 .schedulify-error-notice {
@@ -248,38 +179,10 @@
     gap: 10px;
 }
 
-@keyframes schedulify-shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-
 /* ==========================================================================
    5. Mobile Responsiveness
    ========================================================================== */
 @media (max-width: 640px) {
-    .schedulify-multistep-wizard {
-        padding: 12px 16px;
-    }
-
-    .schedulify-step-badge {
-        width: 32px;
-        height: 32px;
-        font-size: 13px;
-    }
-
-    .schedulify-step-title {
-        font-size: 13px;
-    }
-
-    .schedulify-step-subtitle {
-        font-size: 10px;
-    }
-
-    .schedulify-wizard-divider {
-        margin: 0 10px;
-    }
-
     .schedulify-btn-next {
         width: 100% !important;
     }
