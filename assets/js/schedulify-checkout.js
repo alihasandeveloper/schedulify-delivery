@@ -69,39 +69,65 @@
     }
 
     /**
-     * Helper: Detect current shipping method from checkout
+     * Helper: Detect current shipping method from checkout (Classic Shortcode + Gutenberg Blocks)
      */
     function detectCurrentShippingMethod() {
-        let method = '';
-        const $checkedMethod = $('input[name^="shipping_method"]:checked, input[name="shipping_method[0]"]:checked, select[name^="shipping_method"]');
-        if ($checkedMethod.length) {
-            method = $checkedMethod.val() || '';
+        // 1. Classic Checkout radio/select check
+        const $classicChecked = $('input[name^="shipping_method"]:checked, input[name="shipping_method[0]"]:checked, select[name^="shipping_method"]');
+        if ($classicChecked.length && $classicChecked.val()) {
+            return $classicChecked.val();
         }
 
-        // If only 1 shipping rate exists or hidden input
-        if (!method) {
-            const $hidden = $('input[type="hidden"][name^="shipping_method"], input[name^="shipping_method"]');
-            if ($hidden.length && $hidden.length === 1) {
-                method = $hidden.val() || '';
+        // 2. Block Checkout DOM checked input
+        const $blockChecked = $('.wc-block-components-shipping-rates-control input:checked, .wc-block-components-radio-control__input:checked, .wc-block-checkout__shipping-methods input:checked, [data-block-name="woocommerce/checkout-shipping-methods-block"] input:checked, fieldset.wc-block-checkout__shipping-options input:checked');
+        if ($blockChecked.length && $blockChecked.val()) {
+            return $blockChecked.val();
+        }
+
+        // 3. Checked DOM Label text check (match against shipping method titles)
+        const $activeLabel = $('.wc-block-components-shipping-rates-control input:checked, .wc-block-components-radio-control__input:checked')
+            .closest('label, .wc-block-components-radio-control__option, .wc-block-components-radio-control')
+            .find('.wc-block-components-radio-control__label, .wc-block-components-radio-control__description');
+        if ($activeLabel.length) {
+            const labelText = $activeLabel.first().text().trim();
+            if (labelText) {
+                return labelText;
             }
         }
 
-        // Block checkout store check
-        if (!method && window.wp && window.wp.data) {
+        // 4. Any other checked radio in shipping containers
+        const $anyChecked = $('[class*="shipping"] input[type="radio"]:checked, tr.shipping input[type="radio"]:checked, fieldset input[type="radio"]:checked');
+        if ($anyChecked.length && $anyChecked.first().val()) {
+            return $anyChecked.first().val();
+        }
+
+        // 5. WooCommerce Blocks Store API (wp.data wc/store/cart)
+        if (window.wp && window.wp.data) {
             try {
-                const cart = window.wp.data.select('wc/store/cart').getCartData();
-                if (cart && cart.shippingRates && cart.shippingRates.length) {
-                    for (let rate of cart.shippingRates) {
-                        if (rate.selected) {
-                            method = rate.rate_id;
-                            break;
+                const cartSelect = window.wp.data.select('wc/store/cart');
+                if (cartSelect) {
+                    const cart = typeof cartSelect.getCartData === 'function' ? cartSelect.getCartData() : null;
+                    if (cart && cart.shippingRates && cart.shippingRates.length) {
+                        for (let pkg of cart.shippingRates) {
+                            const rates = pkg.shipping_rates || (pkg.rate_id ? [pkg] : []);
+                            for (let rate of rates) {
+                                if (rate.selected) {
+                                    return rate.rate_id || rate.name || '';
+                                }
+                            }
                         }
                     }
                 }
             } catch (e) { }
         }
 
-        return method;
+        // 6. Single shipping method input
+        const $hidden = $('input[type="hidden"][name^="shipping_method"], input[name^="shipping_method"]');
+        if ($hidden.length && $hidden.length === 1 && $hidden.val()) {
+            return $hidden.val();
+        }
+
+        return '';
     }
 
     /**
@@ -138,24 +164,34 @@
             const methods = foundRule.methods || {};
 
             if (shippingMethod && Object.keys(methods).length > 0) {
-                const cleanShipMethod = String(shippingMethod).trim();
-                if (methods[cleanShipMethod]) {
-                    matchedMethod = methods[cleanShipMethod];
-                } else {
+                const cleanShipMethod = String(shippingMethod).trim().toLowerCase();
+
+                // 1. Exact Key Match
+                for (let mk in methods) {
+                    if (String(mk).trim().toLowerCase() === cleanShipMethod) {
+                        matchedMethod = methods[mk];
+                        break;
+                    }
+                }
+
+                // 2. Title Match (Exact or Substring)
+                if (!matchedMethod) {
                     for (let mk in methods) {
-                        const cleanKey = String(mk).trim();
-                        if (cleanKey.toLowerCase() === cleanShipMethod.toLowerCase()) {
+                        const mTitle = String(methods[mk].shipping_method_title || '').trim().toLowerCase();
+                        if (mTitle && (cleanShipMethod.indexOf(mTitle) !== -1 || mTitle.indexOf(cleanShipMethod) !== -1)) {
                             matchedMethod = methods[mk];
                             break;
                         }
                     }
-                    if (!matchedMethod) {
-                        for (let mk in methods) {
-                            const cleanKey = String(mk).trim();
-                            if (cleanShipMethod.indexOf(cleanKey) === 0 || cleanKey.indexOf(cleanShipMethod) === 0) {
-                                matchedMethod = methods[mk];
-                                break;
-                            }
+                }
+
+                // 3. Key prefix / suffix match
+                if (!matchedMethod) {
+                    for (let mk in methods) {
+                        const cleanKey = String(mk).trim().toLowerCase();
+                        if (cleanShipMethod.indexOf(cleanKey) !== -1 || cleanKey.indexOf(cleanShipMethod) !== -1) {
+                            matchedMethod = methods[mk];
+                            break;
                         }
                     }
                 }
@@ -532,11 +568,31 @@
         });
 
         // Listen for shipping method changes on checkout (both Classic and Block Checkout)
-        $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"]', function () {
+        $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"], .wc-block-components-radio-control, .wc-block-components-radio-control__option, .wc-block-components-radio-control__label, [data-block-name="woocommerce/checkout-shipping-methods-block"]', function () {
             setTimeout(function () {
                 refreshCalendarRules();
-            }, 30);
+            }, 50);
+            setTimeout(function () {
+                refreshCalendarRules();
+            }, 250);
         });
+
+        // Subscribe to WooCommerce Gutenberg Blocks store state changes
+        if (window.wp && window.wp.data && typeof window.wp.data.subscribe === 'function') {
+            let lastDetectedMethod = '';
+            let lastDetectedDistrict = '';
+            window.wp.data.subscribe(function () {
+                try {
+                    const curMethod = detectCurrentShippingMethod();
+                    const curDistrict = detectCurrentDistrictCode();
+                    if (curMethod !== lastDetectedMethod || curDistrict !== lastDetectedDistrict) {
+                        lastDetectedMethod = curMethod;
+                        lastDetectedDistrict = curDistrict;
+                        refreshCalendarRules();
+                    }
+                } catch (e) {}
+            });
+        }
 
         // Observe dynamic DOM changes for block checkout, ignore flatpickr calendar mutations
         let debounceTimer = null;
