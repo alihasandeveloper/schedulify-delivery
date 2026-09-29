@@ -1,0 +1,286 @@
+/**
+ * Schedulify Multi-Step Checkout Styles
+ * Version: 1.0.0
+ */
+
+:root {
+    --schedulify-primary: #4f46e5;
+    --schedulify-primary-hover: #4338ca;
+    --schedulify-primary-light: #eef2ff;
+    --schedulify-success: #10b981;
+    --schedulify-danger: #ef4444;
+    --schedulify-text-main: #1f2937;
+    --schedulify-text-muted: #6b7280;
+    --schedulify-border-color: #e5e7eb;
+    --schedulify-bg-gray: #f9fafb;
+    --schedulify-radius: 10px;
+    --schedulify-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* ==========================================================================
+   1. Multi-Step Wizard Header Progress Bar
+   ========================================================================== */
+.schedulify-multistep-wizard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border: 1px solid var(--schedulify-border-color);
+    border-radius: var(--schedulify-radius);
+    padding: 16px 24px;
+    margin-bottom: 30px;
+    box-shadow: var(--schedulify-shadow);
+    user-select: none;
+}
+
+.schedulify-wizard-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+.schedulify-step-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background-color: var(--schedulify-bg-gray);
+    border: 2px solid var(--schedulify-border-color);
+    color: var(--schedulify-text-muted);
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.schedulify-step-badge .schedulify-step-icon {
+    display: none;
+    line-height: 1;
+}
+
+.schedulify-step-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.schedulify-step-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--schedulify-text-muted);
+}
+
+.schedulify-step-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--schedulify-text-main);
+    line-height: 1.3;
+}
+
+/* Active Step */
+.schedulify-wizard-step.active .schedulify-step-badge {
+    background-color: var(--schedulify-primary);
+    border-color: var(--schedulify-primary);
+    color: #ffffff;
+    box-shadow: 0 0 0 4px var(--schedulify-primary-light);
+}
+
+.schedulify-wizard-step.active .schedulify-step-title {
+    color: var(--schedulify-primary);
+}
+
+/* Completed Step */
+.schedulify-wizard-step.completed .schedulify-step-badge {
+    background-color: var(--schedulify-success);
+    border-color: var(--schedulify-success);
+    color: #ffffff;
+}
+
+.schedulify-wizard-step.completed .schedulify-step-badge .schedulify-step-num {
+    display: none;
+}
+
+.schedulify-wizard-step.completed .schedulify-step-badge .schedulify-step-icon {
+    display: inline-flex;
+}
+
+/* Divider Line */
+.schedulify-wizard-divider {
+    flex: 1;
+    margin: 0 20px;
+    display: flex;
+    align-items: center;
+}
+
+.schedulify-divider-line {
+    width: 100%;
+    height: 2px;
+    background-color: var(--schedulify-border-color);
+    position: relative;
+    border-radius: 2px;
+}
+
+.schedulify-multistep-wizard.step-2-active .schedulify-divider-line {
+    background-color: var(--schedulify-success);
+    transition: background-color 0.4s ease;
+}
+
+/* ==========================================================================
+   2. Step Content Wrappers
+   ========================================================================== */
+.schedulify-step-content {
+    display: none;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.schedulify-step-content.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ==========================================================================
+   3. Action & Navigation Buttons
+   ========================================================================== */
+.schedulify-step-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--schedulify-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.schedulify-step-1-actions {
+    justify-content: flex-end;
+}
+
+.schedulify-step-top-nav {
+    margin-bottom: 22px;
+}
+
+.schedulify-btn-next,
+.schedulify-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    background-color: var(--schedulify-primary) !important;
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    padding: 14px 28px !important;
+    border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
+    text-decoration: none !important;
+}
+
+.schedulify-btn-next:hover,
+.schedulify-btn:hover {
+    background-color: var(--schedulify-primary-hover) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+}
+
+.schedulify-btn-secondary,
+.schedulify-btn-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--schedulify-text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid var(--schedulify-border-color);
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.schedulify-btn-back-link {
+    border: none;
+    padding: 6px 0;
+    color: var(--schedulify-primary);
+}
+
+.schedulify-btn-secondary:hover {
+    background-color: var(--schedulify-bg-gray);
+    color: var(--schedulify-text-main);
+    border-color: #d1d5db;
+}
+
+.schedulify-btn-back-link:hover {
+    color: var(--schedulify-primary-hover);
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   4. Validation Errors Highlighting
+   ========================================================================== */
+.schedulify-validation-error {
+    border-color: var(--schedulify-danger) !important;
+    background-color: #fff8f8 !important;
+    animation: schedulify-shake 0.3s ease-in-out;
+}
+
+.schedulify-error-notice {
+    background-color: #fef2f2;
+    border-left: 4px solid var(--schedulify-danger);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    color: #991b1b;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@keyframes schedulify-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* ==========================================================================
+   5. Mobile Responsiveness
+   ========================================================================== */
+@media (max-width: 640px) {
+    .schedulify-multistep-wizard {
+        padding: 12px 16px;
+    }
+
+    .schedulify-step-badge {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+    }
+
+    .schedulify-step-title {
+        font-size: 13px;
+    }
+
+    .schedulify-step-subtitle {
+        font-size: 10px;
+    }
+
+    .schedulify-wizard-divider {
+        margin: 0 10px;
+    }
+
+    .schedulify-btn-next {
+        width: 100% !important;
+    }
+}
