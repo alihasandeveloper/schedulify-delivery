@@ -73,9 +73,17 @@
      */
     function detectCurrentShippingMethod() {
         let method = '';
-        const $checkedMethod = $('input[name^="shipping_method"]:checked, input[name="shipping_method[0]"]');
+        const $checkedMethod = $('input[name^="shipping_method"]:checked, input[name="shipping_method[0]"]:checked, select[name^="shipping_method"]');
         if ($checkedMethod.length) {
             method = $checkedMethod.val() || '';
+        }
+
+        // If only 1 shipping rate exists or hidden input
+        if (!method) {
+            const $hidden = $('input[type="hidden"][name^="shipping_method"], input[name^="shipping_method"]');
+            if ($hidden.length && $hidden.length === 1) {
+                method = $hidden.val() || '';
+            }
         }
 
         // Block checkout store check
@@ -130,13 +138,24 @@
             const methods = foundRule.methods || {};
 
             if (shippingMethod && Object.keys(methods).length > 0) {
-                if (methods[shippingMethod]) {
-                    matchedMethod = methods[shippingMethod];
+                const cleanShipMethod = String(shippingMethod).trim();
+                if (methods[cleanShipMethod]) {
+                    matchedMethod = methods[cleanShipMethod];
                 } else {
                     for (let mk in methods) {
-                        if (mk === shippingMethod || shippingMethod.startsWith(mk) || mk.startsWith(shippingMethod)) {
+                        const cleanKey = String(mk).trim();
+                        if (cleanKey.toLowerCase() === cleanShipMethod.toLowerCase()) {
                             matchedMethod = methods[mk];
                             break;
+                        }
+                    }
+                    if (!matchedMethod) {
+                        for (let mk in methods) {
+                            const cleanKey = String(mk).trim();
+                            if (cleanShipMethod.indexOf(cleanKey) === 0 || cleanKey.indexOf(cleanShipMethod) === 0) {
+                                matchedMethod = methods[mk];
+                                break;
+                            }
                         }
                     }
                 }
@@ -148,8 +167,8 @@
             }
 
             const ruleDelay = matchedMethod && matchedMethod.delay_hours !== undefined ? matchedMethod.delay_hours : (foundRule.delay_hours !== undefined ? foundRule.delay_hours : 0);
-            const ruleOffDays = matchedMethod && Array.isArray(matchedMethod.off_days) && matchedMethod.off_days.length > 0 ? matchedMethod.off_days : (foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays);
-            const ruleRanges = matchedMethod && Array.isArray(matchedMethod.disabled_date_ranges) && matchedMethod.disabled_date_ranges.length > 0 ? matchedMethod.disabled_date_ranges : (foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges);
+            const ruleOffDays = matchedMethod && Array.isArray(matchedMethod.off_days) ? matchedMethod.off_days : (foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays);
+            const ruleRanges = matchedMethod && Array.isArray(matchedMethod.disabled_date_ranges) ? matchedMethod.disabled_date_ranges : (foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges);
             const ruleBlackout = matchedMethod && matchedMethod.blackout_dates && String(matchedMethod.blackout_dates).trim() !== '' ? matchedMethod.blackout_dates : (foundRule.blackout_dates && String(foundRule.blackout_dates).trim() !== '' ? foundRule.blackout_dates : generalBlackout);
             const ruleAllowed = matchedMethod && matchedMethod.allowed_dates && String(matchedMethod.allowed_dates).trim() !== '' ? matchedMethod.allowed_dates : (foundRule.allowed_dates && String(foundRule.allowed_dates).trim() !== '' ? foundRule.allowed_dates : generalAllowed);
 
@@ -245,13 +264,6 @@
                         return false;
                     }
                 }
-            }
-        }
-
-        // Matrix array check if pre-calculated
-        if (matrices && matrices[currentMatrixKey] && matrices[currentMatrixKey].standard) {
-            if (matrices[currentMatrixKey].standard[ymd] === false) {
-                return false;
             }
         }
 
@@ -519,9 +531,11 @@
             refreshCalendarRules();
         });
 
-        // Listen for shipping method changes on checkout
-        $(document).on('change', 'input[name^="shipping_method"], .wc_payment_methods input[type="radio"]', function () {
-            refreshCalendarRules();
+        // Listen for shipping method changes on checkout (both Classic and Block Checkout)
+        $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"]', function () {
+            setTimeout(function () {
+                refreshCalendarRules();
+            }, 30);
         });
 
         // Observe dynamic DOM changes for block checkout, ignore flatpickr calendar mutations
