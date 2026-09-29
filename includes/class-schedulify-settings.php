@@ -783,14 +783,6 @@ class Schedulify_Settings {
         ];
         ?>
         <div class="wrap schedulify-settings-wrap">
-            <div class="schedulify-header">
-                <h1>
-                    <span class="dashicons dashicons-calendar-alt"></span>
-                    <?php _e('Schedulify Delivery Settings', 'schedulify-delivery'); ?>
-                </h1>
-                <p class="schedulify-subtitle"><?php _e('Configure global delivery options and zone-specific matrix rules with delivery delays.', 'schedulify-delivery'); ?></p>
-            </div>
-
             <?php settings_errors('schedulify_messages'); ?>
 
             <div class="schedulify-tabs-container">
