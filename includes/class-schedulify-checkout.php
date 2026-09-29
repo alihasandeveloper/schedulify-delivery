@@ -142,11 +142,19 @@ class Schedulify_Checkout {
                 $matched_method_conf = reset($rule_methods);
             }
 
-            $delay_hours = isset($matched_method_conf['delay_hours']) ? max(0, intval($matched_method_conf['delay_hours'])) : max(0, intval($found_rule['delay_hours'] ?? 0));
-            $rule_off_days = !empty($matched_method_conf['off_days']) ? (array)$matched_method_conf['off_days'] : (!empty($found_rule['off_days']) ? (array)$found_rule['off_days'] : (array)($settings['off_days'] ?? []));
-            $rule_ranges   = !empty($matched_method_conf['disabled_date_ranges']) ? (array)$matched_method_conf['disabled_date_ranges'] : (!empty($found_rule['disabled_date_ranges']) ? (array)$found_rule['disabled_date_ranges'] : (array)($settings['disabled_date_ranges'] ?? []));
-            $rule_blackout = (isset($matched_method_conf['blackout_dates']) && trim($matched_method_conf['blackout_dates']) !== '') ? $matched_method_conf['blackout_dates'] : ((isset($found_rule['blackout_dates']) && trim($found_rule['blackout_dates']) !== '') ? $found_rule['blackout_dates'] : ($settings['blackout_dates'] ?? ''));
-            $rule_allowed  = (isset($matched_method_conf['allowed_dates']) && trim($matched_method_conf['allowed_dates']) !== '') ? $matched_method_conf['allowed_dates'] : ((isset($found_rule['allowed_dates']) && trim($found_rule['allowed_dates']) !== '') ? $found_rule['allowed_dates'] : ($settings['allowed_dates'] ?? ''));
+            if ($matched_method_conf) {
+                $delay_hours   = isset($matched_method_conf['delay_hours']) ? max(0, intval($matched_method_conf['delay_hours'])) : max(0, intval($settings['delay_hours'] ?? 0));
+                $rule_off_days = isset($matched_method_conf['off_days']) && is_array($matched_method_conf['off_days']) ? (array)$matched_method_conf['off_days'] : (array)($settings['off_days'] ?? []);
+                $rule_ranges   = isset($matched_method_conf['disabled_date_ranges']) && is_array($matched_method_conf['disabled_date_ranges']) ? (array)$matched_method_conf['disabled_date_ranges'] : (array)($settings['disabled_date_ranges'] ?? []);
+                $rule_blackout = isset($matched_method_conf['blackout_dates']) ? (string)$matched_method_conf['blackout_dates'] : ($settings['blackout_dates'] ?? '');
+                $rule_allowed  = isset($matched_method_conf['allowed_dates']) ? (string)$matched_method_conf['allowed_dates'] : ($settings['allowed_dates'] ?? '');
+            } else {
+                $delay_hours   = isset($found_rule['delay_hours']) ? max(0, intval($found_rule['delay_hours'])) : max(0, intval($settings['delay_hours'] ?? 0));
+                $rule_off_days = isset($found_rule['off_days']) && is_array($found_rule['off_days']) ? (array)$found_rule['off_days'] : (array)($settings['off_days'] ?? []);
+                $rule_ranges   = isset($found_rule['disabled_date_ranges']) && is_array($found_rule['disabled_date_ranges']) ? (array)$found_rule['disabled_date_ranges'] : (array)($settings['disabled_date_ranges'] ?? []);
+                $rule_blackout = isset($found_rule['blackout_dates']) ? (string)$found_rule['blackout_dates'] : ($settings['blackout_dates'] ?? '');
+                $rule_allowed  = isset($found_rule['allowed_dates']) ? (string)$found_rule['allowed_dates'] : ($settings['allowed_dates'] ?? '');
+            }
 
             return [
                 'source'                => 'zone_rule',

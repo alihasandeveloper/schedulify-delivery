@@ -138,36 +138,56 @@
     }
 
     /**
-     * Helper: Detect current shipping method from checkout (Classic Shortcode + Gutenberg Blocks)
+     * Helper: Detect current shipping method details (ID + Title) from checkout
      */
-    function detectCurrentShippingMethod() {
+    function detectCurrentShippingInfo() {
+        let shipId = '';
+        let shipTitle = '';
+        let raw = '';
+
         // 1. Classic Checkout radio/select check
         const $classicChecked = $('input[name^="shipping_method"]:checked, input[name="shipping_method[0]"]:checked, select[name^="shipping_method"]');
         if ($classicChecked.length && $classicChecked.val()) {
-            return $classicChecked.val();
+            shipId = String($classicChecked.val()).trim();
+            const $lbl = $classicChecked.closest('li, label, tr');
+            if ($lbl.length) {
+                shipTitle = $lbl.text().replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+            return { id: shipId, title: shipTitle, raw: shipId + ' ' + shipTitle };
         }
 
-        // 2. Block Checkout DOM checked input
+        // 2. Block Checkout DOM checked input & label
         const $blockChecked = $('.wc-block-components-shipping-rates-control input:checked, .wc-block-components-radio-control__input:checked, .wc-block-checkout__shipping-methods input:checked, [data-block-name="woocommerce/checkout-shipping-methods-block"] input:checked, fieldset.wc-block-checkout__shipping-options input:checked');
         if ($blockChecked.length && $blockChecked.val()) {
-            return $blockChecked.val();
+            shipId = String($blockChecked.val()).trim();
+            const $option = $blockChecked.closest('.wc-block-components-radio-control__option, label, .wc-block-components-radio-control');
+            const $labelEl = $option.find('.wc-block-components-radio-control__label, .wc-block-components-radio-control__description');
+            if ($labelEl.length) {
+                shipTitle = $labelEl.first().text().replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
+            } else if ($option.length) {
+                shipTitle = $option.text().replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+            if (shipId || shipTitle) {
+                return { id: shipId, title: shipTitle, raw: shipId + ' ' + shipTitle };
+            }
         }
 
-        // 3. Checked DOM Label text check (match against shipping method titles)
+        // 3. Checked DOM Label text fallback
         const $activeLabel = $('.wc-block-components-shipping-rates-control input:checked, .wc-block-components-radio-control__input:checked')
             .closest('label, .wc-block-components-radio-control__option, .wc-block-components-radio-control')
             .find('.wc-block-components-radio-control__label, .wc-block-components-radio-control__description');
         if ($activeLabel.length) {
-            const labelText = $activeLabel.first().text().trim();
-            if (labelText) {
-                return labelText;
-            }
+            shipTitle = $activeLabel.first().text().trim();
         }
 
         // 4. Any other checked radio in shipping containers
         const $anyChecked = $('[class*="shipping"] input[type="radio"]:checked, tr.shipping input[type="radio"]:checked, fieldset input[type="radio"]:checked');
         if ($anyChecked.length && $anyChecked.first().val()) {
-            return $anyChecked.first().val();
+            shipId = String($anyChecked.first().val()).trim();
+            const $lbl = $anyChecked.first().closest('label, tr, li, div');
+            if ($lbl.length && !shipTitle) {
+                shipTitle = $lbl.text().trim();
+            }
         }
 
         // 5. WooCommerce Blocks Store API (wp.data wc/store/cart)
@@ -181,7 +201,9 @@
                             const rates = pkg.shipping_rates || (pkg.rate_id ? [pkg] : []);
                             for (let rate of rates) {
                                 if (rate.selected) {
-                                    return rate.rate_id || rate.name || '';
+                                    if (!shipId) shipId = rate.rate_id || '';
+                                    if (!shipTitle) shipTitle = rate.name || '';
+                                    break;
                                 }
                             }
                         }
@@ -193,10 +215,22 @@
         // 6. Single shipping method input
         const $hidden = $('input[type="hidden"][name^="shipping_method"], input[name^="shipping_method"]');
         if ($hidden.length && $hidden.length === 1 && $hidden.val()) {
-            return $hidden.val();
+            if (!shipId) shipId = String($hidden.val()).trim();
         }
 
-        return '';
+        return {
+            id: shipId,
+            title: shipTitle,
+            raw: (shipId + ' ' + shipTitle).trim()
+        };
+    }
+
+    /**
+     * Helper: Detect current shipping method string
+     */
+    function detectCurrentShippingMethod() {
+        const info = detectCurrentShippingInfo();
+        return info.id || info.title || info.raw || '';
     }
 
     /**
@@ -204,7 +238,7 @@
      */
     function updateActiveRuleFromDistrict() {
         const districtCode = detectCurrentDistrictCode();
-        const shippingMethod = detectCurrentShippingMethod();
+        const shipInfo = detectCurrentShippingInfo();
 
         const generalDelay = (settings && settings.delay_hours !== undefined) ? parseInt(settings.delay_hours, 10) : ((active_rule && active_rule.delay_hours !== undefined) ? parseInt(active_rule.delay_hours, 10) : 0);
         const generalOffDays = (settings && settings.off_days) || (active_rule && active_rule.off_days) || [];
@@ -232,51 +266,86 @@
         if (foundRule) {
             let matchedMethod = null;
             const methods = foundRule.methods || {};
+            const shipId = String(shipInfo.id || '').trim().toLowerCase();
+            const cleanShipId = shipId.replace(/^\d+:/, '');
+            const shipTitle = String(shipInfo.title || '').trim().toLowerCase();
+            const shipRaw = String(shipInfo.raw || '').trim().toLowerCase();
 
-            if (shippingMethod && Object.keys(methods).length > 0) {
-                const cleanShipMethod = String(shippingMethod).trim().toLowerCase();
+            if (Object.keys(methods).length > 0) {
+                // Priority 1: Exact Key Match on clean ID or full ID
+                if (cleanShipId && methods[cleanShipId]) {
+                    matchedMethod = methods[cleanShipId];
+                } else if (shipId && methods[shipId]) {
+                    matchedMethod = methods[shipId];
+                }
 
-                // 1. Exact Key Match
-                for (let mk in methods) {
-                    if (String(mk).trim().toLowerCase() === cleanShipMethod) {
-                        matchedMethod = methods[mk];
-                        break;
+                // Priority 2: Case-insensitive Key Match in loop
+                if (!matchedMethod && (cleanShipId || shipId)) {
+                    for (let mk in methods) {
+                        const cleanMk = String(mk).trim().toLowerCase().replace(/^\d+:/, '');
+                        if (cleanMk === cleanShipId || cleanMk === shipId || String(mk).trim().toLowerCase() === shipId) {
+                            matchedMethod = methods[mk];
+                            break;
+                        }
                     }
                 }
 
-                // 2. Title Match (Exact or Substring)
-                if (!matchedMethod) {
+                // Priority 3: Exact Shipping Method Title Match
+                if (!matchedMethod && shipTitle) {
                     for (let mk in methods) {
                         const mTitle = String(methods[mk].shipping_method_title || '').trim().toLowerCase();
-                        if (mTitle && (cleanShipMethod.indexOf(mTitle) !== -1 || mTitle.indexOf(cleanShipMethod) !== -1)) {
+                        if (mTitle && (mTitle === shipTitle || shipTitle.startsWith(mTitle))) {
                             matchedMethod = methods[mk];
                             break;
                         }
                     }
                 }
 
-                // 3. Key prefix / suffix match
-                if (!matchedMethod) {
+                // Priority 4: Title Substring / Inclusion Match
+                if (!matchedMethod && (shipTitle || shipRaw)) {
+                    const searchStr = shipTitle || shipRaw;
                     for (let mk in methods) {
-                        const cleanKey = String(mk).trim().toLowerCase();
-                        if (cleanShipMethod.indexOf(cleanKey) !== -1 || cleanKey.indexOf(cleanShipMethod) !== -1) {
+                        const mTitle = String(methods[mk].shipping_method_title || '').trim().toLowerCase();
+                        if (mTitle && (searchStr.includes(mTitle) || mTitle.includes(searchStr))) {
                             matchedMethod = methods[mk];
                             break;
                         }
                     }
                 }
+
+                // Priority 5: Method ID stored inside object property
+                if (!matchedMethod && (cleanShipId || shipId)) {
+                    for (let mk in methods) {
+                        const innerId = String(methods[mk].shipping_method_id || '').trim().toLowerCase().replace(/^\d+:/, '');
+                        if (innerId && (innerId === cleanShipId || innerId === shipId)) {
+                            matchedMethod = methods[mk];
+                            break;
+                        }
+                    }
+                }
+
+                // Priority 6: Fallback to first configured method in this zone rule
+                if (!matchedMethod) {
+                    const firstKey = Object.keys(methods)[0];
+                    matchedMethod = methods[firstKey];
+                }
             }
 
-            if (!matchedMethod && Object.keys(methods).length > 0) {
-                const firstKey = Object.keys(methods)[0];
-                matchedMethod = methods[firstKey];
-            }
+            let ruleDelay, ruleOffDays, ruleRanges, ruleBlackout, ruleAllowed;
 
-            const ruleDelay = matchedMethod && matchedMethod.delay_hours !== undefined ? matchedMethod.delay_hours : (foundRule.delay_hours !== undefined ? foundRule.delay_hours : generalDelay);
-            const ruleOffDays = matchedMethod && Array.isArray(matchedMethod.off_days) ? matchedMethod.off_days : (foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays);
-            const ruleRanges = matchedMethod && Array.isArray(matchedMethod.disabled_date_ranges) ? matchedMethod.disabled_date_ranges : (foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges);
-            const ruleBlackout = matchedMethod && matchedMethod.blackout_dates && String(matchedMethod.blackout_dates).trim() !== '' ? matchedMethod.blackout_dates : (foundRule.blackout_dates && String(foundRule.blackout_dates).trim() !== '' ? foundRule.blackout_dates : generalBlackout);
-            const ruleAllowed = matchedMethod && matchedMethod.allowed_dates && String(matchedMethod.allowed_dates).trim() !== '' ? matchedMethod.allowed_dates : (foundRule.allowed_dates && String(foundRule.allowed_dates).trim() !== '' ? foundRule.allowed_dates : generalAllowed);
+            if (matchedMethod) {
+                ruleDelay    = matchedMethod.delay_hours !== undefined ? Math.max(0, parseInt(matchedMethod.delay_hours, 10)) : generalDelay;
+                ruleOffDays  = matchedMethod.off_days !== undefined && Array.isArray(matchedMethod.off_days) ? matchedMethod.off_days : generalOffDays;
+                ruleRanges   = matchedMethod.disabled_date_ranges !== undefined && Array.isArray(matchedMethod.disabled_date_ranges) ? matchedMethod.disabled_date_ranges : generalRanges;
+                ruleBlackout = matchedMethod.blackout_dates !== undefined ? String(matchedMethod.blackout_dates) : generalBlackout;
+                ruleAllowed  = matchedMethod.allowed_dates !== undefined ? String(matchedMethod.allowed_dates) : generalAllowed;
+            } else {
+                ruleDelay    = foundRule.delay_hours !== undefined ? Math.max(0, parseInt(foundRule.delay_hours, 10)) : generalDelay;
+                ruleOffDays  = foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays;
+                ruleRanges   = foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges;
+                ruleBlackout = foundRule.blackout_dates !== undefined ? String(foundRule.blackout_dates) : generalBlackout;
+                ruleAllowed  = foundRule.allowed_dates !== undefined ? String(foundRule.allowed_dates) : generalAllowed;
+            }
 
             currentActiveRule = {
                 id: foundRule.id || '',
@@ -526,6 +595,7 @@
 
         const minDate = getEarliestAllowedDate();
         flatpickrInstance.set('minDate', minDate);
+        flatpickrInstance.set('disable', [function (date) { return !isDateAllowed(date); }]);
 
         if (forceClear) {
             userSelectedDate = null;
@@ -769,9 +839,16 @@
         let ruleRefreshTimer = null;
         function debouncedRefreshCalendarRules() {
             clearTimeout(ruleRefreshTimer);
+            refreshCalendarRules();
             ruleRefreshTimer = setTimeout(function () {
                 refreshCalendarRules();
-            }, 200);
+            }, 100);
+            setTimeout(function () {
+                refreshCalendarRules();
+            }, 350);
+            setTimeout(function () {
+                refreshCalendarRules();
+            }, 800);
         }
 
         // Listen for district / state / city changes on checkout (both Classic and Block Checkout)
@@ -780,7 +857,7 @@
         });
 
         // Listen for shipping method changes on checkout (both Classic and Block Checkout)
-        $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"], .wc-block-components-radio-control, .wc-block-components-radio-control__option, .wc-block-components-radio-control__label, [data-block-name="woocommerce/checkout-shipping-methods-block"]', function () {
+        $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"], .wc-block-components-radio-control, .wc-block-components-radio-control__input, .wc-block-components-radio-control__option, .wc-block-components-radio-control__label, [data-block-name="woocommerce/checkout-shipping-methods-block"]', function () {
             debouncedRefreshCalendarRules();
         });
 
@@ -789,15 +866,19 @@
             let lastDetectedMethod = '';
             let lastDetectedDistrict = '';
             let lastShippingState = null;
+            let lastIsCalculating = null;
             window.wp.data.subscribe(function () {
                 try {
+                    const cartStore = window.wp.data.select('wc/store/cart');
+                    const isCalculating = cartStore && typeof cartStore.isCartCalculating === 'function' ? cartStore.isCartCalculating() : false;
                     const curMethod = detectCurrentShippingMethod();
                     const curDistrict = detectCurrentDistrictCode();
                     const curShippingState = isShippingAvailable();
-                    if (curMethod !== lastDetectedMethod || curDistrict !== lastDetectedDistrict || curShippingState !== lastShippingState) {
+                    if (curMethod !== lastDetectedMethod || curDistrict !== lastDetectedDistrict || curShippingState !== lastShippingState || (lastIsCalculating === true && isCalculating === false)) {
                         lastDetectedMethod = curMethod;
                         lastDetectedDistrict = curDistrict;
                         lastShippingState = curShippingState;
+                        lastIsCalculating = isCalculating;
                         refreshCalendarRules();
                     }
                 } catch (e) {}
@@ -842,10 +923,16 @@
             observer.observe(targetNode, { childList: true, subtree: true });
         }
 
-        // Re-init and update rules on WooCommerce checkout updates
-        $(document.body).on('updated_checkout updated_shipping_method', function () {
+        // Re-init and update rules on AJAX completes and WooCommerce events
+        $(document).ajaxComplete(function (event, xhr, settings) {
+            if (settings && settings.url && (settings.url.includes('wc/store') || settings.url.includes('woocommerce') || settings.url.includes('admin-ajax.php'))) {
+                debouncedRefreshCalendarRules();
+            }
+        });
+
+        $(document.body).on('updated_checkout updated_shipping_method update_checkout', function () {
             mountToBlockCheckout();
-            refreshCalendarRules();
+            debouncedRefreshCalendarRules();
         });
     });
 
