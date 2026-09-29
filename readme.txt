@@ -34,7 +34,7 @@ Whether you run a local bakery, restaurant, grocery, flower shop, or an eCommerc
 
 1. Upload the `schedulify-delivery` folder to the `/wp-content/plugins/` directory, or install the plugin directly through the WordPress plugins screen.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
-3. Navigate to **WooCommerce > Delivery Scheduler** to configure your general delivery settings and zone-specific rules.
+3. Navigate to **WooCommerce > Schedulify Delivery** to configure your general delivery settings and zone-specific rules.
 
 == Frequently Asked Questions ==
 
@@ -42,7 +42,7 @@ Whether you run a local bakery, restaurant, grocery, flower shop, or an eCommerc
 Yes, Schedulify Delivery is built and tested with full HPOS compatibility.
 
 = Can I configure different delivery delay hours for different cities/zones? =
-Yes! You can create dedicated Zone Rules under **WooCommerce > Delivery Scheduler > Zone Settings** for any city, district, or WooCommerce shipping zone.
+Yes! You can create dedicated Zone Rules under **WooCommerce > Schedulify Delivery > Zone Settings** for any city, district, or WooCommerce shipping zone.
 
 = What happens if a customer changes their shipping location or shipping method at checkout? =
 The checkout datepicker automatically recalculates available delivery dates via real-time matrix evaluation based on the selected location and shipping method.

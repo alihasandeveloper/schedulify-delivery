@@ -64,6 +64,25 @@
     outline: none !important;
 }
 
+.schedulify-calendar-input:disabled,
+.schedulify-calendar-input.schedulify-disabled,
+.schedulify-scheduler-card.schedulify-shipping-disabled .schedulify-calendar-input {
+    background-color: #f6f7f7 !important;
+    color: #8c8f94 !important;
+    border-color: #dcdcde !important;
+    cursor: not-allowed !important;
+    opacity: 0.75 !important;
+    pointer-events: none !important;
+}
+
+.schedulify-scheduler-card.schedulify-shipping-disabled .schedulify-input-calendar-icon {
+    opacity: 0.4 !important;
+}
+
+.schedulify-scheduler-card.schedulify-shipping-disabled .schedulify-input-icon-wrapper {
+    cursor: not-allowed !important;
+}
+
 .schedulify-input-calendar-icon {
     position: absolute;
     right: 14px;

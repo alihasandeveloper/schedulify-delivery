@@ -311,9 +311,11 @@ class Schedulify_Checkout {
             'ajax_url'              => admin_url('admin-ajax.php'),
             'nonce'                 => wp_create_nonce('schedulify_checkout_nonce'),
             'i18n'                  => [
-                'selectDate'    => __('Select a delivery date', 'schedulify-delivery'),
-                'scheduleDate'  => __('Choose Date', 'schedulify-delivery'),
-                'notAvailable'  => __('Delivery is not available on the selected date', 'schedulify-delivery'),
+                'selectDate'        => __('Select a delivery date', 'schedulify-delivery'),
+                'scheduleDate'      => __('Choose Date', 'schedulify-delivery'),
+                'notAvailable'      => __('Delivery is not available on the selected date', 'schedulify-delivery'),
+                'noShippingMethod'  => __('Please select a shipping method first...', 'schedulify-delivery'),
+                'clickToSelect'     => __('Click to select a date...', 'schedulify-delivery'),
             ]
         ]);
     }

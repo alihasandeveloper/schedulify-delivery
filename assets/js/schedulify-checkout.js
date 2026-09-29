@@ -312,9 +312,127 @@
     }
 
     /**
+     * Helper: Check if a valid shipping method is available and selected on checkout
+     */
+    function isShippingAvailable() {
+        // 1. Check for warning/error banners indicating missing address or unavailable shipping
+        const $noShippingBanner = $('.wc-block-components-notice-banner.is-error, .wc-block-components-notice-banner.is-warning, .woocommerce-error, .woocommerce-info, .woocommerce-no-shipping-available-html, .wc-block-components-shipping-rates-control__no-rates').filter(function () {
+            const txt = $(this).text().toLowerCase();
+            return txt.includes('no shipping') || txt.includes('enter a shipping address') || txt.includes('no matching shipping') || txt.includes('verify the address');
+        });
+
+        if ($noShippingBanner.length > 0) {
+            return false;
+        }
+
+        // 2. Check for placeholder text inside shipping options panel
+        const $shippingContainers = $('.wc-block-checkout__shipping-option, [data-block-name="woocommerce/checkout-shipping-methods-block"], fieldset.wc-block-checkout__shipping-options, tr.shipping, .woocommerce-shipping-totals, .wc-block-components-shipping-rates-control');
+        if ($shippingContainers.length > 0) {
+            const areaText = $shippingContainers.text().toLowerCase();
+            if (areaText.includes('enter a shipping address') || areaText.includes('no shipping options are available') || areaText.includes('no shipping methods offered')) {
+                return false;
+            }
+        }
+
+        // 3. Check for shipping inputs in DOM
+        const $shippingInputs = $('input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], .wc-block-components-shipping-rates-control input, .wc-block-components-radio-control__input, [data-block-name="woocommerce/checkout-shipping-methods-block"] input');
+        if ($shippingInputs.length > 0) {
+            const $checked = $shippingInputs.filter(':checked');
+            if ($checked.length === 0) {
+                return false;
+            }
+        }
+
+        // 4. Check via detectCurrentShippingMethod()
+        const currentMethod = detectCurrentShippingMethod();
+        if (!currentMethod || !String(currentMethod).trim()) {
+            // Check if cart needs shipping in Gutenberg store
+            if (window.wp && window.wp.data) {
+                try {
+                    const cartStore = window.wp.data.select('wc/store/cart');
+                    if (cartStore) {
+                        const cart = typeof cartStore.getCartData === 'function' ? cartStore.getCartData() : null;
+                        if (cart) {
+                            if (cart.needsShipping === false) {
+                                return true; // Digital / non-shippable order
+                            }
+                            if (cart.shippingRates && cart.shippingRates.length) {
+                                let hasSelected = false;
+                                for (let pkg of cart.shippingRates) {
+                                    const rates = pkg.shipping_rates || (pkg.rate_id ? [pkg] : []);
+                                    for (let r of rates) {
+                                        if (r.selected) hasSelected = true;
+                                    }
+                                }
+                                if (!hasSelected) return false;
+                            } else {
+                                return false;
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            // If shipping container exists in DOM and no method detected, shipping is not ready
+            if ($shippingContainers.length > 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Helper: Toggle enabled/disabled state of Delivery Date based on shipping availability
+     */
+    function updateDeliveryFieldState() {
+        const isAvailable = isShippingAvailable();
+        const $displayInput = $('#schedulify_delivery_date_display');
+        const $hiddenInput = $('#schedulify_delivery_date');
+        const $wrapper = $('#schedulify-delivery-scheduler-wrapper');
+        const i18n = (schedulifyData && schedulifyData.i18n) || {};
+        const noShippingPlaceholder = i18n.noShippingMethod || 'Please select a shipping method first...';
+        const defaultPlaceholder = i18n.clickToSelect || 'Click to select a date...';
+
+        const altInput = flatpickrInstance ? flatpickrInstance.altInput : null;
+
+        if (!isAvailable) {
+            $displayInput.prop('disabled', true).addClass('schedulify-disabled').attr('placeholder', noShippingPlaceholder);
+            if (altInput) {
+                $(altInput).prop('disabled', true).addClass('schedulify-disabled').attr('placeholder', noShippingPlaceholder);
+            }
+            $wrapper.addClass('schedulify-shipping-disabled');
+
+            if ($hiddenInput.val() || userSelectedDate) {
+                $hiddenInput.val('');
+                userSelectedDate = null;
+                if (flatpickrInstance) {
+                    flatpickrInstance.clear();
+                }
+                syncWithSession();
+            }
+            if (flatpickrInstance) {
+                flatpickrInstance.close();
+            }
+        } else {
+            $displayInput.prop('disabled', false).removeClass('schedulify-disabled').attr('placeholder', defaultPlaceholder);
+            if (altInput) {
+                $(altInput).prop('disabled', false).removeClass('schedulify-disabled').attr('placeholder', defaultPlaceholder);
+            }
+            $wrapper.removeClass('schedulify-shipping-disabled');
+        }
+
+        return isAvailable;
+    }
+
+    /**
      * Helper: Check if a specific date object is allowed for delivery
      */
     function isDateAllowed(dateObj) {
+        if (!isShippingAvailable()) {
+            return false;
+        }
+
         const ymd = formatDateYMD(dateObj);
         const earliestAllowed = getEarliestAllowedDate();
 
@@ -395,8 +513,14 @@
      */
     function refreshCalendarRules(forceClear = false) {
         updateActiveRuleFromDistrict();
+        const shippingReady = updateDeliveryFieldState();
 
         if (!flatpickrInstance) return;
+
+        if (!shippingReady) {
+            flatpickrInstance.clear();
+            return;
+        }
 
         const minDate = getEarliestAllowedDate();
         flatpickrInstance.set('minDate', minDate);
@@ -469,6 +593,11 @@
             animate: false,
             monthSelectorType: 'static',
             disable: disabledRules,
+            onOpen: function (selectedDates, dateStr, instance) {
+                if (!isShippingAvailable()) {
+                    instance.close();
+                }
+            },
             onChange: function (selectedDates, dateStr) {
                 if (dateStr) {
                     userSelectedDate = dateStr;
@@ -488,7 +617,9 @@
 
         flatpickrInstance = flatpickr(inputEl, flatpickrConfig);
 
-        if (targetDate) {
+        updateDeliveryFieldState();
+
+        if (targetDate && isShippingAvailable()) {
             $('#schedulify_delivery_date').val(targetDate);
             syncWithSession();
         }
@@ -655,13 +786,16 @@
         if (window.wp && window.wp.data && typeof window.wp.data.subscribe === 'function') {
             let lastDetectedMethod = '';
             let lastDetectedDistrict = '';
+            let lastShippingState = null;
             window.wp.data.subscribe(function () {
                 try {
                     const curMethod = detectCurrentShippingMethod();
                     const curDistrict = detectCurrentDistrictCode();
-                    if (curMethod !== lastDetectedMethod || curDistrict !== lastDetectedDistrict) {
+                    const curShippingState = isShippingAvailable();
+                    if (curMethod !== lastDetectedMethod || curDistrict !== lastDetectedDistrict || curShippingState !== lastShippingState) {
                         lastDetectedMethod = curMethod;
                         lastDetectedDistrict = curDistrict;
+                        lastShippingState = curShippingState;
                         refreshCalendarRules();
                     }
                 } catch (e) {}

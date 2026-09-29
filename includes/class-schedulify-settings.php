@@ -52,8 +52,8 @@ class Schedulify_Settings {
     public function add_admin_menu() {
         add_submenu_page(
             'woocommerce',
-            __('Delivery Scheduler', 'schedulify-delivery'),
-            __('Delivery Scheduler', 'schedulify-delivery'),
+            __('Schedulify Delivery', 'schedulify-delivery'),
+            __('Schedulify Delivery', 'schedulify-delivery'),
             'manage_woocommerce',
             'schedulify-delivery',
             [$this, 'render_settings_page']
@@ -476,10 +476,10 @@ class Schedulify_Settings {
                     }
                 }
 
-                // 2. Zone name match (e.g. Zone named "Bogura" matching "Bogura" district)
+                // 2. Zone name exact match (ONLY if the shipping zone has NO specific states configured, to avoid matching 'Outside Bogura' for 'Bogura')
                 $name_match = false;
-                if (!$state_match && !empty($zone_name) && !empty($district_name) && !$is_default) {
-                    if (strpos($zone_name, $district_name) !== false || strpos($district_name, $zone_name) !== false) {
+                if (!$state_match && empty($states) && !empty($zone_name) && !empty($district_name) && !$is_default) {
+                    if ($zone_name === $district_name) {
                         $name_match = true;
                     }
                 }
@@ -787,7 +787,7 @@ class Schedulify_Settings {
         <div class="wrap schedulify-settings-wrap">
 
             <h1 class="wp-heading-inline">
-                <?php _e('Delivery Scheduler', 'schedulify-delivery'); ?>
+                <?php _e('Schedulify Delivery', 'schedulify-delivery'); ?>
             </h1>
             <hr class="wp-header-end">
 
