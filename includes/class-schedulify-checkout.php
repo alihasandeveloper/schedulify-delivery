@@ -274,9 +274,9 @@ class Schedulify_Checkout {
             true
         );
 
-        $now_timestamp = function_exists('current_time') ? current_time('timestamp') : time();
-        $server_date = function_exists('wp_date') ? wp_date('Y-m-d') : (function_exists('current_time') ? current_time('Y-m-d') : date('Y-m-d'));
-        $server_time = function_exists('wp_date') ? wp_date('H:i') : (function_exists('current_time') ? current_time('H:i') : date('H:i'));
+        $now_timestamp = time();
+        $server_date = function_exists('wp_date') ? wp_date('Y-m-d') : date('Y-m-d');
+        $server_time = function_exists('wp_date') ? wp_date('H:i:s') : date('H:i:s');
 
         $active_district_code = self::get_customer_district_code();
         $active_rule = self::get_effective_rule_for_district($active_district_code);

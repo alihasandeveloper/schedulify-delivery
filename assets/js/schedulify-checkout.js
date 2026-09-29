@@ -375,9 +375,25 @@
      */
     function getEarliestAllowedDate() {
         const delayHours = Math.max(0, parseInt(currentActiveRule.delay_hours || 0, 10));
-        const baseTimestamp = (serverTime && serverTime.timestamp) ? (serverTime.timestamp * 1000) : Date.now();
-        const earliestMs = baseTimestamp + (delayHours * 3600 * 1000);
-        return formatDateYMD(new Date(earliestMs));
+        
+        let baseDate;
+        if (serverTime && serverTime.date) {
+            const dateParts = String(serverTime.date).split('-').map(Number);
+            const timeParts = (serverTime.time || '00:00:00').split(':').map(Number);
+            baseDate = new Date(
+                dateParts[0],
+                dateParts[1] - 1,
+                dateParts[2],
+                timeParts[0] || 0,
+                timeParts[1] || 0,
+                timeParts[2] || 0
+            );
+        } else {
+            baseDate = new Date();
+        }
+
+        baseDate.setHours(baseDate.getHours() + delayHours);
+        return formatDateYMD(baseDate);
     }
 
     /**

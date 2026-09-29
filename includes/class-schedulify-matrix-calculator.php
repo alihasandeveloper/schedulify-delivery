@@ -85,11 +85,11 @@ class Schedulify_Matrix_Calculator {
      * @return array
      */
     public function get_delivery_availability_matrix() {
-        $current_timestamp = function_exists('current_time') ? current_time('timestamp') : time();
-        $today_ymd = function_exists('wp_date') ? wp_date('Y-m-d', $current_timestamp) : date('Y-m-d', $current_timestamp);
+        $now_utc = time();
+        $today_ymd = function_exists('wp_date') ? wp_date('Y-m-d', $now_utc) : date('Y-m-d', $now_utc);
 
         // Calculate earliest possible delivery date based on current timestamp + delay hours
-        $earliest_allowed_timestamp = $current_timestamp + ( $this->delay_hours * 3600 );
+        $earliest_allowed_timestamp = $now_utc + ( $this->delay_hours * 3600 );
         $earliest_allowed_ymd = function_exists('wp_date') ? wp_date('Y-m-d', $earliest_allowed_timestamp) : date('Y-m-d', $earliest_allowed_timestamp);
 
         $standard_matrix = [];
