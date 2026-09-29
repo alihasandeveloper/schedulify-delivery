@@ -56,6 +56,7 @@ final class Schedulify_Delivery {
         require_once SCHEDULIFY_PLUGIN_DIR . 'includes/class-schedulify-matrix-calculator.php';
         require_once SCHEDULIFY_PLUGIN_DIR . 'includes/class-schedulify-settings.php';
         require_once SCHEDULIFY_PLUGIN_DIR . 'includes/class-schedulify-checkout.php';
+        require_once SCHEDULIFY_PLUGIN_DIR . 'includes/class-schedulify-multistep-checkout.php';
         require_once SCHEDULIFY_PLUGIN_DIR . 'includes/class-schedulify-order.php';
     }
 
@@ -98,6 +99,7 @@ final class Schedulify_Delivery {
         // Initialize sub-classes
         Schedulify_Settings::get_instance();
         Schedulify_Checkout::get_instance();
+        Schedulify_Multistep_Checkout::get_instance();
         Schedulify_Order::get_instance();
     }
 
