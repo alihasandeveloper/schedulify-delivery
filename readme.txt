@@ -1,6 +1,6 @@
 === Schedulify Delivery – WooCommerce Zone Delivery Date & Schedule Matrix ===
-Contributors: boomdevs
-Donate link: https://boomdevs.com/
+Contributors: alihasandeveloper
+Donate link: https://github.com/alihasandeveloper/
 Tags: woocommerce, delivery date, delivery scheduler, order delivery, shipping matrix, delivery time, lead time
 Requires at least: 5.8
 Tested up to: 6.7
