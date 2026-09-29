@@ -64,33 +64,61 @@ class Schedulify_Settings {
             return;
         }
 
+        $ver = defined('WP_DEBUG') && WP_DEBUG ? time() : SCHEDULIFY_VERSION;
+        $css_ver = file_exists(SCHEDULIFY_PLUGIN_DIR . 'assets/css/schedulify-admin.css') ? filemtime(SCHEDULIFY_PLUGIN_DIR . 'assets/css/schedulify-admin.css') : $ver;
+        $js_ver  = file_exists(SCHEDULIFY_PLUGIN_DIR . 'assets/js/schedulify-admin.js') ? filemtime(SCHEDULIFY_PLUGIN_DIR . 'assets/js/schedulify-admin.js') : $ver;
+
         wp_enqueue_style(
             'schedulify-admin-css',
             SCHEDULIFY_PLUGIN_URL . 'assets/css/schedulify-admin.css',
             [],
-            SCHEDULIFY_VERSION
+            $css_ver
         );
 
         wp_enqueue_script(
             'schedulify-admin-js',
             SCHEDULIFY_PLUGIN_URL . 'assets/js/schedulify-admin.js',
             ['jquery'],
-            SCHEDULIFY_VERSION,
+            $js_ver,
             true
         );
 
         $settings = self::get_settings();
 
+        $days_of_week = [
+            0 => __('Sunday (রবিবার)', 'schedulify-delivery'),
+            1 => __('Monday (সোমবার)', 'schedulify-delivery'),
+            2 => __('Tuesday (মঙ্গলবার)', 'schedulify-delivery'),
+            3 => __('Wednesday (বুধবার)', 'schedulify-delivery'),
+            4 => __('Thursday (বৃহস্পতিবার)', 'schedulify-delivery'),
+            5 => __('Friday (শুক্রবার)', 'schedulify-delivery'),
+            6 => __('Saturday (শনিবার)', 'schedulify-delivery'),
+        ];
+
         $localized_data = [
-            'ajax_url'  => admin_url('admin-ajax.php'),
-            'nonce'     => wp_create_nonce('schedulify_admin_nonce'),
-            'zoneRules' => $settings['zone_rules'] ?? [],
-            'i18n'      => [
-                'selectZoneError'  => __('Please select at least one zone to proceed.', 'schedulify-delivery'),
-                'methodRequired'   => __('Please select a shipping method.', 'schedulify-delivery'),
-                'delayRequired'    => __('Please enter a valid Delivery Delay in Hours (0 or more).', 'schedulify-delivery'),
-                'confirmDelete'    => __('Are you sure you want to delete this zone rule?', 'schedulify-delivery'),
-                'allZonesAssigned' => __('All zones have already been assigned to delivery rules.', 'schedulify-delivery'),
+            'ajax_url'   => admin_url('admin-ajax.php'),
+            'nonce'      => wp_create_nonce('schedulify_admin_nonce'),
+            'zoneRules'  => $settings['zone_rules'] ?? [],
+            'daysOfWeek' => $days_of_week,
+            'i18n'       => [
+                'selectZoneError'    => __('Please select at least one zone to proceed.', 'schedulify-delivery'),
+                'methodRequired'     => __('Please configure at least one shipping method.', 'schedulify-delivery'),
+                'delayRequired'      => __('Please enter a valid Delivery Delay in Hours (0 or more) for enabled methods.', 'schedulify-delivery'),
+                'confirmDelete'      => __('Are you sure you want to delete this zone rule?', 'schedulify-delivery'),
+                'allZonesAssigned'   => __('All zones have already been assigned to delivery rules.', 'schedulify-delivery'),
+                'copySuccess'        => __('Configuration copied to all other shipping methods in this zone!', 'schedulify-delivery'),
+                'enableMethod'       => __('Enable custom schedule rule for this method', 'schedulify-delivery'),
+                'delayHours'         => __('Delivery Delay (in Hours)', 'schedulify-delivery'),
+                'weeklyOffDays'      => __('Weekly Off-Days', 'schedulify-delivery'),
+                'disabledRanges'     => __('Disabled Date Ranges', 'schedulify-delivery'),
+                'blackoutDates'      => __('Blackout / Holiday Dates', 'schedulify-delivery'),
+                'allowedDates'       => __('Allowed Delivery Dates (Exceptions)', 'schedulify-delivery'),
+                'addDateRange'       => __('Add Date Range', 'schedulify-delivery'),
+                'copyToAll'          => __('Copy Settings to All Methods', 'schedulify-delivery'),
+                'hoursUnit'          => __('Hours', 'schedulify-delivery'),
+                'sameDayHint'        => __('Earliest available delivery date based on (Current Time + Delay Hours). 0 = Same-Day allowed, 24 = Next Day, 48 = 2 Days Lead Time.', 'schedulify-delivery'),
+                'noMethodsFound'     => __('No shipping methods found for the selected zone(s).', 'schedulify-delivery'),
+                'loadingMethods'     => __('Loading shipping methods...', 'schedulify-delivery'),
             ]
         ];
 
@@ -492,8 +520,27 @@ class Schedulify_Settings {
             $final_methods = $all_methods;
         }
 
+        // Also fetch any existing rules that apply to any of the selected zones
+        $all_zone_rules = class_exists('Schedulify_DB') ? Schedulify_DB::get_zone_rules() : [];
+        $existing_rules = [];
+        foreach ($all_zone_rules as $rule) {
+            $rule_districts = (array)($rule['districts'] ?? []);
+            if (!empty(array_intersect($selected_codes, $rule_districts))) {
+                if (!empty($rule['methods']) && is_array($rule['methods'])) {
+                    foreach ($rule['methods'] as $mk => $mconf) {
+                        $existing_rules[$mk] = $mconf;
+                    }
+                }
+                $m_key = $rule['shipping_method_id'] ?? 'all';
+                if (!isset($existing_rules[$m_key])) {
+                    $existing_rules[$m_key] = $rule;
+                }
+            }
+        }
+
         wp_send_json_success([
-            'methods' => array_values($final_methods)
+            'methods'        => array_values($final_methods),
+            'existing_rules' => $existing_rules,
         ]);
     }
 
@@ -549,14 +596,9 @@ class Schedulify_Settings {
         }
 
         // 2. Save / Update Zone Rule
-        if (isset($_POST['schedulify_save_zone_rule']) || isset($_POST['schedulify_save_zone_rule'])) {
-            if (isset($_POST['schedulify_zone_rule_nonce'])) {
-                check_admin_referer('schedulify_zone_rule_nonce_action', 'schedulify_zone_rule_nonce');
-            } else {
-                check_admin_referer('schedulify_zone_rule_nonce_action', 'schedulify_zone_rule_nonce');
-            }
+        if (isset($_POST['schedulify_save_zone_rule'])) {
+            check_admin_referer('schedulify_zone_rule_nonce_action', 'schedulify_zone_rule_nonce');
 
-            $rule_id = !empty($_POST['rule_id']) ? sanitize_text_field($_POST['rule_id']) : 'rule_' . uniqid();
             $districts = isset($_POST['districts']) && is_array($_POST['districts']) ? array_map('sanitize_text_field', $_POST['districts']) : [];
 
             if (empty($districts)) {
@@ -564,60 +606,143 @@ class Schedulify_Settings {
                 return;
             }
 
-            if (!isset($_POST['delay_hours']) || trim($_POST['delay_hours']) === '' || intval($_POST['delay_hours']) < 0) {
-                add_settings_error('schedulify_messages', 'schedulify_error', __('Please enter a valid Delivery Delay in Hours (0 or more).', 'schedulify-delivery'), 'error');
-                return;
-            }
+            $rule_id = !empty($_POST['rule_id']) ? sanitize_text_field($_POST['rule_id']) : ('rule_' . uniqid());
+            $saved_count = 0;
 
-            $shipping_method_id    = !empty($_POST['shipping_method_id']) ? sanitize_text_field($_POST['shipping_method_id']) : 'all';
-            $shipping_method_title = !empty($_POST['shipping_method_title']) ? sanitize_text_field($_POST['shipping_method_title']) : '';
-            $delay_hours           = max(0, intval($_POST['delay_hours']));
-            $off_days              = isset($_POST['zone_off_days']) && is_array($_POST['zone_off_days']) ? array_map('absint', $_POST['zone_off_days']) : [];
-            $blackout_dates        = sanitize_textarea_field($_POST['zone_blackout_dates'] ?? '');
-            $allowed_dates         = sanitize_textarea_field($_POST['zone_allowed_dates'] ?? '');
+            // Check if submitted via multi-method tabs format
+            if (isset($_POST['methods']) && is_array($_POST['methods'])) {
+                $configured_methods = [];
 
-            // Zone Disabled Date Ranges
-            $disabled_ranges = [];
-            if (isset($_POST['zone_disabled_date_ranges']) && is_array($_POST['zone_disabled_date_ranges'])) {
-                foreach ($_POST['zone_disabled_date_ranges'] as $range) {
-                    $start  = sanitize_text_field($range['start'] ?? '');
-                    $end    = sanitize_text_field($range['end'] ?? '');
-                    $reason = sanitize_text_field($range['reason'] ?? '');
-                    if (!empty($start) && !empty($end)) {
-                        if ($start > $end) {
-                            $temp  = $start;
-                            $start = $end;
-                            $end   = $temp;
+                foreach ($_POST['methods'] as $m_key => $m_data) {
+                    $delay_str = isset($m_data['delay_hours']) ? trim($m_data['delay_hours']) : '';
+
+                    if ($delay_str !== '') {
+                        $shipping_method_id = sanitize_text_field($m_key);
+                        $shipping_method_title = !empty($m_data['shipping_method_title']) ? sanitize_text_field($m_data['shipping_method_title']) : '';
+                        $delay_hours = max(0, intval($delay_str));
+                        $off_days = isset($m_data['off_days']) && is_array($m_data['off_days']) ? array_map('absint', $m_data['off_days']) : [];
+                        $blackout_dates = sanitize_textarea_field($m_data['blackout_dates'] ?? '');
+                        $allowed_dates = sanitize_textarea_field($m_data['allowed_dates'] ?? '');
+
+                        // Zone Disabled Date Ranges for this method
+                        $disabled_ranges = [];
+                        if (isset($m_data['disabled_date_ranges']) && is_array($m_data['disabled_date_ranges'])) {
+                            foreach ($m_data['disabled_date_ranges'] as $range) {
+                                $start  = sanitize_text_field($range['start'] ?? '');
+                                $end    = sanitize_text_field($range['end'] ?? '');
+                                $reason = sanitize_text_field($range['reason'] ?? '');
+                                if (!empty($start) && !empty($end)) {
+                                    if ($start > $end) {
+                                        $temp  = $start;
+                                        $start = $end;
+                                        $end   = $temp;
+                                    }
+                                    $disabled_ranges[] = [
+                                        'start'  => $start,
+                                        'end'    => $end,
+                                        'reason' => $reason,
+                                    ];
+                                }
+                            }
                         }
-                        $disabled_ranges[] = [
-                            'start'  => $start,
-                            'end'    => $end,
-                            'reason' => $reason,
+
+                        $configured_methods[$shipping_method_id] = [
+                            'shipping_method_id'    => $shipping_method_id,
+                            'shipping_method_title' => $shipping_method_title,
+                            'delay_hours'           => $delay_hours,
+                            'off_days'              => $off_days,
+                            'disabled_date_ranges'  => $disabled_ranges,
+                            'blackout_dates'        => $blackout_dates,
+                            'allowed_dates'         => $allowed_dates,
                         ];
                     }
                 }
+
+                if (!empty($configured_methods)) {
+                    $first_m = reset($configured_methods);
+                    $new_rule = [
+                        'id'                    => $rule_id,
+                        'shipping_method_id'    => count($configured_methods) === 1 ? $first_m['shipping_method_id'] : 'multiple',
+                        'shipping_method_title' => count($configured_methods) === 1 ? $first_m['shipping_method_title'] : '',
+                        'districts'             => array_values($districts),
+                        'delay_hours'           => $first_m['delay_hours'] ?? 0,
+                        'off_days'              => $first_m['off_days'] ?? [],
+                        'disabled_date_ranges'  => $first_m['disabled_date_ranges'] ?? [],
+                        'blackout_dates'        => $first_m['blackout_dates'] ?? '',
+                        'allowed_dates'         => $first_m['allowed_dates'] ?? '',
+                        'methods'               => $configured_methods,
+                    ];
+
+                    if (class_exists('Schedulify_DB')) {
+                        Schedulify_DB::save_zone_rule($new_rule);
+                    }
+                    $saved_count = 1;
+                }
+            } elseif (isset($_POST['delay_hours'])) {
+                // Fallback single rule format
+                $shipping_method_id    = !empty($_POST['shipping_method_id']) ? sanitize_text_field($_POST['shipping_method_id']) : 'all';
+                $shipping_method_title = !empty($_POST['shipping_method_title']) ? sanitize_text_field($_POST['shipping_method_title']) : '';
+                $delay_hours           = max(0, intval($_POST['delay_hours']));
+                $off_days              = isset($_POST['zone_off_days']) && is_array($_POST['zone_off_days']) ? array_map('absint', $_POST['zone_off_days']) : [];
+                $blackout_dates        = sanitize_textarea_field($_POST['zone_blackout_dates'] ?? '');
+                $allowed_dates         = sanitize_textarea_field($_POST['zone_allowed_dates'] ?? '');
+
+                $disabled_ranges = [];
+                if (isset($_POST['zone_disabled_date_ranges']) && is_array($_POST['zone_disabled_date_ranges'])) {
+                    foreach ($_POST['zone_disabled_date_ranges'] as $range) {
+                        $start  = sanitize_text_field($range['start'] ?? '');
+                        $end    = sanitize_text_field($range['end'] ?? '');
+                        $reason = sanitize_text_field($range['reason'] ?? '');
+                        if (!empty($start) && !empty($end)) {
+                            if ($start > $end) {
+                                $temp  = $start;
+                                $start = $end;
+                                $end   = $temp;
+                            }
+                            $disabled_ranges[] = [
+                                'start'  => $start,
+                                'end'    => $end,
+                                'reason' => $reason,
+                            ];
+                        }
+                    }
+                }
+
+                $new_rule = [
+                    'id'                    => $rule_id,
+                    'shipping_method_id'    => $shipping_method_id,
+                    'shipping_method_title' => $shipping_method_title,
+                    'districts'             => array_values($districts),
+                    'delay_hours'           => $delay_hours,
+                    'off_days'              => $off_days,
+                    'disabled_date_ranges'  => $disabled_ranges,
+                    'blackout_dates'        => $blackout_dates,
+                    'allowed_dates'         => $allowed_dates,
+                    'methods'               => [
+                        $shipping_method_id => [
+                            'shipping_method_id'    => $shipping_method_id,
+                            'shipping_method_title' => $shipping_method_title,
+                            'delay_hours'           => $delay_hours,
+                            'off_days'              => $off_days,
+                            'disabled_date_ranges'  => $disabled_ranges,
+                            'blackout_dates'        => $blackout_dates,
+                            'allowed_dates'         => $allowed_dates,
+                        ]
+                    ]
+                ];
+
+                if (class_exists('Schedulify_DB')) {
+                    Schedulify_DB::save_zone_rule($new_rule);
+                }
+                $saved_count = 1;
             }
 
-            // Create or update rule in custom database table
-            $new_rule = [
-                'id'                    => $rule_id,
-                'shipping_method_id'    => $shipping_method_id,
-                'shipping_method_title' => $shipping_method_title,
-                'districts'             => array_values($districts),
-                'delay_hours'           => $delay_hours,
-                'off_days'              => $off_days,
-                'disabled_date_ranges'  => $disabled_ranges,
-                'blackout_dates'        => $blackout_dates,
-                'allowed_dates'         => $allowed_dates,
-            ];
-
-            if (class_exists('Schedulify_DB')) {
-                Schedulify_DB::save_zone_rule($new_rule);
-            } elseif (class_exists('schedulify_DB')) {
-                schedulify_DB::save_zone_rule($new_rule);
+            if ($saved_count > 0) {
+                add_settings_error('schedulify_messages', 'schedulify_message', __('Zone Delivery Rule Saved Successfully!', 'schedulify-delivery'), 'updated');
+            } else {
+                add_settings_error('schedulify_messages', 'schedulify_error', __('Please configure at least one shipping method with valid delay hours.', 'schedulify-delivery'), 'error');
             }
 
-            add_settings_error('schedulify_messages', 'schedulify_message', __('Zone Delivery Rule Saved Successfully!', 'schedulify-delivery'), 'updated');
             wp_safe_redirect(add_query_arg(['page' => 'schedulify-delivery', 'tab' => 'zones'], admin_url('admin.php')));
             exit;
         }
@@ -790,8 +915,8 @@ class Schedulify_Settings {
                             <table class="wp-list-table widefat fixed striped schedulify-zone-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 28%;"><?php _e('Assigned Zones', 'schedulify-delivery'); ?></th>
-                                        <th style="width: 18%;"><?php _e('Shipping Method', 'schedulify-delivery'); ?></th>
+                                        <th style="width: 26%;"><?php _e('Assigned Zones', 'schedulify-delivery'); ?></th>
+                                        <th style="width: 20%;"><?php _e('Shipping Method', 'schedulify-delivery'); ?></th>
                                         <th style="width: 18%;"><?php _e('Delivery Delay', 'schedulify-delivery'); ?></th>
                                         <th style="width: 16%;"><?php _e('Weekly Off-Days', 'schedulify-delivery'); ?></th>
                                         <th style="width: 12%;"><?php _e('Blackout / Ranges', 'schedulify-delivery'); ?></th>
@@ -801,15 +926,26 @@ class Schedulify_Settings {
                                 <tbody>
                                     <?php 
                                     $shipping_methods = self::get_all_woocommerce_shipping_methods();
+                                    $day_short = [0 => 'Sun', 1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat'];
+
                                     foreach ($zone_rules as $rule) : 
                                         $r_id = $rule['id'] ?? '';
                                         $r_districts = (array)($rule['districts'] ?? []);
-                                        $r_method_id = $rule['shipping_method_id'] ?? 'all';
-                                        $r_method_title = !empty($rule['shipping_method_title']) ? $rule['shipping_method_title'] : ($shipping_methods[$r_method_id]['title'] ?? $r_method_id);
-                                        $r_delay = intval($rule['delay_hours'] ?? 0);
-                                        $r_off_days = (array)($rule['off_days'] ?? []);
-                                        $r_blackout = trim($rule['blackout_dates'] ?? '');
-                                        $r_ranges_count = count((array)($rule['disabled_date_ranges'] ?? []));
+                                        $rule_methods = !empty($rule['methods']) && is_array($rule['methods']) ? $rule['methods'] : [];
+
+                                        // Fallback if rule['methods'] is empty
+                                        if (empty($rule_methods)) {
+                                            $m_key = $rule['shipping_method_id'] ?? 'all';
+                                            $rule_methods[$m_key] = [
+                                                'shipping_method_id'    => $m_key,
+                                                'shipping_method_title' => !empty($rule['shipping_method_title']) ? $rule['shipping_method_title'] : ($shipping_methods[$m_key]['title'] ?? $m_key),
+                                                'delay_hours'           => intval($rule['delay_hours'] ?? 0),
+                                                'off_days'              => (array)($rule['off_days'] ?? []),
+                                                'disabled_date_ranges'  => (array)($rule['disabled_date_ranges'] ?? []),
+                                                'blackout_dates'        => $rule['blackout_dates'] ?? '',
+                                                'allowed_dates'         => $rule['allowed_dates'] ?? '',
+                                            ];
+                                        }
 
                                         // Formatted zone names
                                         $district_names = [];
@@ -833,58 +969,84 @@ class Schedulify_Settings {
                                                 </div>
                                             </td>
                                             <td>
-                                                <?php if (!empty($r_method_title)) : ?>
-                                                    <span class="schedulify-badge-method"><?php echo esc_html($r_method_title); ?></span>
-                                                <?php elseif ($r_method_id !== 'all') : ?>
-                                                    <span class="schedulify-badge-method"><?php echo esc_html($r_method_id); ?></span>
-                                                <?php else : ?>
-                                                    <span class="schedulify-badge-method all"><?php _e('Shipping Method', 'schedulify-delivery'); ?></span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="schedulify-delay-badge <?php echo $r_delay === 0 ? 'same-day' : ''; ?>">
-                                                    <span class="dashicons dashicons-clock"></span>
-                                                    <?php 
-                                                    if ($r_delay === 0) {
-                                                        _e('0 Hours', 'schedulify-delivery');
-                                                    } else {
-                                                        printf(_n('%d Hour Delay', '%d Hours Delay', $r_delay, 'schedulify-delivery'), $r_delay);
-                                                    }
+                                                <div class="schedulify-cell-methods-list">
+                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                        $m_title = !empty($m_conf['shipping_method_title']) ? $m_conf['shipping_method_title'] : ($shipping_methods[$m_conf['shipping_method_id']]['title'] ?? $m_conf['shipping_method_id']);
                                                     ?>
-                                                </span>
+                                                        <div class="schedulify-cell-method-item">
+                                                            <span class="schedulify-badge-method"><?php echo esc_html($m_title); ?></span>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
                                             </td>
                                             <td>
-                                                <?php 
-                                                if (empty($r_off_days)) {
-                                                    echo '<span class="schedulify-text-muted">' . __('No Off-Days (Open 7 days)', 'schedulify-delivery') . '</span>';
-                                                } else {
-                                                    $off_labels = [];
-                                                    $day_short = [0 => 'Sun', 1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat'];
-                                                    foreach ($r_off_days as $d) {
-                                                        $off_labels[] = $day_short[$d] ?? $d;
-                                                    }
-                                                    echo '<span class="schedulify-badge-off">' . esc_html(implode(', ', $off_labels)) . '</span>';
-                                                }
-                                                ?>
+                                                <div class="schedulify-cell-delays-list">
+                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                        $m_delay = intval($m_conf['delay_hours'] ?? 0);
+                                                    ?>
+                                                        <div class="schedulify-cell-delay-item">
+                                                            <span class="schedulify-delay-badge <?php echo $m_delay === 0 ? 'same-day' : ''; ?>">
+                                                                <span class="dashicons dashicons-clock"></span>
+                                                                <?php 
+                                                                if ($m_delay === 0) {
+                                                                    _e('0 Hours Lead', 'schedulify-delivery');
+                                                                } else {
+                                                                    printf(_n('%d Hour Delay', '%d Hours Delay', $m_delay, 'schedulify-delivery'), $m_delay);
+                                                                }
+                                                                ?>
+                                                            </span>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
                                             </td>
                                             <td>
-                                                <?php 
-                                                $details = [];
-                                                if (!empty($r_blackout)) {
-                                                    $b_count = count(array_filter(preg_split('/[\r\n,]+/', $r_blackout)));
-                                                    $details[] = sprintf(_n('%d Blackout Date', '%d Blackout Dates', $b_count, 'schedulify-delivery'), $b_count);
-                                                }
-                                                if ($r_ranges_count > 0) {
-                                                    $details[] = sprintf(_n('%d Date Range', '%d Date Ranges', $r_ranges_count, 'schedulify-delivery'), $r_ranges_count);
-                                                }
-                                                if (empty($details)) {
-                                                    echo '<span class="schedulify-text-muted">—</span>';
-                                                } else {
-                                                    echo esc_html(implode(' • ', $details));
-                                                }
-                                                ?>
+                                                <div class="schedulify-cell-offdays-list">
+                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                        $m_off_days = (array)($m_conf['off_days'] ?? []);
+                                                    ?>
+                                                        <div class="schedulify-cell-offday-item">
+                                                            <?php 
+                                                            if (empty($m_off_days)) {
+                                                                echo '<span class="schedulify-text-muted">' . __('Open 7 days', 'schedulify-delivery') . '</span>';
+                                                            } else {
+                                                                $off_labels = [];
+                                                                foreach ($m_off_days as $d) {
+                                                                    $off_labels[] = $day_short[$d] ?? $d;
+                                                                }
+                                                                echo '<span class="schedulify-badge-off">' . esc_html(implode(', ', $off_labels)) . '</span>';
+                                                            }
+                                                            ?>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
                                             </td>
-                                            <td style="text-align: right;">
+                                            <td>
+                                                <div class="schedulify-cell-blackouts-list">
+                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                        $m_blackout = trim($m_conf['blackout_dates'] ?? '');
+                                                        $m_ranges_count = count((array)($m_conf['disabled_date_ranges'] ?? []));
+                                                        $details = [];
+                                                        if (!empty($m_blackout)) {
+                                                            $b_count = count(array_filter(preg_split('/[\r\n,]+/', $m_blackout)));
+                                                            $details[] = sprintf(_n('%d Blackout', '%d Blackouts', $b_count, 'schedulify-delivery'), $b_count);
+                                                        }
+                                                        if ($m_ranges_count > 0) {
+                                                            $details[] = sprintf(_n('%d Range', '%d Ranges', $m_ranges_count, 'schedulify-delivery'), $m_ranges_count);
+                                                        }
+                                                    ?>
+                                                        <div class="schedulify-cell-blackout-item">
+                                                            <?php 
+                                                            if (empty($details)) {
+                                                                echo '<span class="schedulify-text-muted">—</span>';
+                                                            } else {
+                                                                echo esc_html(implode(' • ', $details));
+                                                            }
+                                                            ?>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </td>
+                                            <td style="text-align: right; vertical-align: middle;">
                                                 <button type="button" class="button button-small schedulify-edit-rule">
                                                     <span class="dashicons dashicons-edit"></span> <?php _e('Edit', 'schedulify-delivery'); ?>
                                                 </button>
@@ -958,7 +1120,7 @@ class Schedulify_Settings {
                             </div>
                         </div>
 
-                        <!-- STEP 2: CONFIGURE RULES & DELAY -->
+                        <!-- STEP 2: CONFIGURE RULES & DELAY (TABBED PER SHIPPING METHOD) -->
                         <div class="schedulify-modal-step" id="schedulify-modal-step-2" style="display: none;">
                             <div class="schedulify-selected-zones-pill-bar">
                                 <div class="schedulify-pill-bar-left">
@@ -970,82 +1132,25 @@ class Schedulify_Settings {
                                 </button>
                             </div>
 
-                            <div class="schedulify-modal-form-grid">
-                                <!-- Shipping Method Selector -->
-                                <div class="schedulify-form-row">
-                                    <label for="schedulify_zone_shipping_method">
-                                        <strong><?php _e('Shipping Method', 'schedulify-delivery'); ?> <span class="required">*</span></strong>
-                                    </label>
-                                    <select name="shipping_method_id" id="schedulify_zone_shipping_method" class="regular-text" required>
-                                        <option value="" disabled selected>
-                                            <?php _e('-- Select Shipping Method --', 'schedulify-delivery'); ?>
-                                        </option>
-                                    </select>
-                                    <input type="hidden" name="shipping_method_title" id="schedulify_zone_shipping_method_title" value="">
+                            <div class="schedulify-methods-wrapper">
+                                <div class="schedulify-methods-header">
+                                    <div class="schedulify-methods-header-title">
+                                        <span class="dashicons dashicons-car"></span>
+                                        <strong><?php _e('Configure Shipping Methods', 'schedulify-delivery'); ?></strong>
+                                    </div>
                                     <p class="description">
-                                        <?php _e('Select the WooCommerce shipping method (e.g. Same Day Delivery, Standard Delivery) that this rule applies to.', 'schedulify-delivery'); ?>
+                                        <?php _e('Configure delivery delays, weekly off-days, and blackout dates for each shipping method in this zone.', 'schedulify-delivery'); ?>
                                     </p>
                                 </div>
 
-                                <!-- Delivery Delay Hours Field -->
-                                <div class="schedulify-form-row schedulify-highlight-field">
-                                    <label for="schedulify_zone_delay_hours">
-                                        <strong><?php _e('Delivery Delay (in Hours)', 'schedulify-delivery'); ?> <span class="required">*</span></strong>
-                                    </label>
-                                    <div class="schedulify-delay-input-group">
-                                        <input type="number" 
-                                               name="delay_hours" 
-                                               id="schedulify_zone_delay_hours" 
-                                               class="regular-text" 
-                                               min="0" 
-                                               step="1" 
-                                               value="" 
-                                               placeholder="e.g. 0 for Same-Day, 24 for Standard" 
-                                               required>
-                                        <span class="schedulify-input-unit"><?php _e('Hours', 'schedulify-delivery'); ?></span>
-                                    </div>
-                                    <p class="description">
-                                        <?php _e('Earliest available delivery date based on (Current Time + Delay Hours). 0 = Same-Day allowed (Today), 24 = Next Day (Tomorrow), 48 = 2 Days Lead Time.', 'schedulify-delivery'); ?>
-                                    </p>
+                                <!-- Dynamic Tab Buttons -->
+                                <div class="schedulify-method-tabs-nav" id="schedulify-method-tabs-nav">
+                                    <!-- Populated dynamically via JS -->
                                 </div>
 
-                                <!-- Weekly Off-Days -->
-                                <div class="schedulify-form-row">
-                                    <label><strong><?php _e('Weekly Off-Days', 'schedulify-delivery'); ?></strong></label>
-                                    <fieldset class="schedulify-checkbox-grid">
-                                        <?php foreach ($days_of_week as $idx => $label) : ?>
-                                            <label class="schedulify-checkbox-item">
-                                                <input type="checkbox" name="zone_off_days[]" value="<?php echo esc_attr($idx); ?>" class="schedulify-zone-off-day">
-                                                <?php echo esc_html($label); ?>
-                                            </label>
-                                        <?php endforeach; ?>
-                                    </fieldset>
-                                    <p class="description"><?php _e('Selected days will be blocked in the calendar for customers in these zones.', 'schedulify-delivery'); ?></p>
-                                </div>
-
-                                <!-- Disabled Date Ranges -->
-                                <div class="schedulify-form-row">
-                                    <label><strong><?php _e('Disabled Date Ranges', 'schedulify-delivery'); ?></strong></label>
-                                    <div class="schedulify-ranges-container" id="schedulify-zone-disabled-ranges">
-                                        <div class="schedulify-ranges-list" id="schedulify-zone-ranges-list"></div>
-                                        <button type="button" class="button button-secondary schedulify-add-range-zone">
-                                            <span class="dashicons dashicons-plus-alt2"></span> <?php _e('Add Date Range', 'schedulify-delivery'); ?>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Blackout Dates -->
-                                <div class="schedulify-form-row">
-                                    <label for="schedulify_zone_blackout"><strong><?php _e('Blackout / Holiday Dates', 'schedulify-delivery'); ?></strong></label>
-                                    <textarea name="zone_blackout_dates" id="schedulify_zone_blackout" rows="2" class="large-text code" placeholder="2026-12-16, 2026-12-25"></textarea>
-                                    <p class="description"><?php _e('Comma or newline separated dates (YYYY-MM-DD) when delivery is not available for these zones.', 'schedulify-delivery'); ?></p>
-                                </div>
-
-                                <!-- Allowed Dates Exceptions -->
-                                <div class="schedulify-form-row">
-                                    <label for="schedulify_zone_allowed"><strong><?php _e('Allowed Delivery Dates (Exceptions)', 'schedulify-delivery'); ?></strong></label>
-                                    <textarea name="zone_allowed_dates" id="schedulify_zone_allowed" rows="2" class="large-text code" placeholder="2026-03-15, 2026-03-30"></textarea>
-                                    <p class="description"><?php _e('Comma or newline separated dates (YYYY-MM-DD) that should always be allowed regardless of off-days.', 'schedulify-delivery'); ?></p>
+                                <!-- Dynamic Tab Panes -->
+                                <div class="schedulify-method-tabs-content" id="schedulify-method-tabs-content">
+                                    <!-- Populated dynamically via JS -->
                                 </div>
                             </div>
                         </div>
@@ -1056,7 +1161,7 @@ class Schedulify_Settings {
                             <?php _e('Next', 'schedulify-delivery'); ?> &rarr;
                         </button>
                         <button type="submit" class="button button-primary" id="schedulify-modal-btn-save" style="display: none;">
-                            <?php _e('Save Rule', 'schedulify-delivery'); ?>
+                            <?php _e('Save Rules', 'schedulify-delivery'); ?>
                         </button>
                     </div>
                 </form>

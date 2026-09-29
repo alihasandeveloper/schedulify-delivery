@@ -5,7 +5,19 @@
     'use strict';
 
     $(document).ready(function () {
-        // Tab Navigation
+        const adminData = window.schedulifyAdminData || {};
+        const i18n = adminData.i18n || {};
+        const daysOfWeek = adminData.daysOfWeek || {
+            0: 'Sunday (রবিবার)',
+            1: 'Monday (সোমবার)',
+            2: 'Tuesday (মঙ্গলবার)',
+            3: 'Wednesday (বুধবার)',
+            4: 'Thursday (বৃহস্পতিবার)',
+            5: 'Friday (শুক্রবার)',
+            6: 'Saturday (শনিবার)'
+        };
+
+        // Tab Navigation for General vs Zone Settings
         $('.schedulify-nav-tabs li').on('click', function () {
             const tabId = $(this).data('tab');
 
@@ -56,42 +68,6 @@
             $newRow.find('input[type="date"]').first().focus();
         });
 
-        // ==========================================
-        // DATE RANGE REPEATER (ZONE MODAL)
-        // ==========================================
-        $(document).on('click', '.schedulify-add-range-zone', function () {
-            addZoneRangeRow('', '', '');
-        });
-
-        function addZoneRangeRow(start = '', end = '', reason = '') {
-            const $list = $('#schedulify-zone-ranges-list');
-            const newIndex = new Date().getTime() + Math.floor(Math.random() * 1000);
-
-            const rangeHtml = `
-                <div class="schedulify-range-row" style="display:none;">
-                    <div class="schedulify-range-field">
-                        <label>From:</label>
-                        <input type="date" name="zone_disabled_date_ranges[${newIndex}][start]" value="${start}" required>
-                    </div>
-                    <div class="schedulify-range-field">
-                        <label>To:</label>
-                        <input type="date" name="zone_disabled_date_ranges[${newIndex}][end]" value="${end}" required>
-                    </div>
-                    <div class="schedulify-range-field schedulify-range-reason">
-                        <label>Reason (Optional):</label>
-                        <input type="text" name="zone_disabled_date_ranges[${newIndex}][reason]" value="${reason}" placeholder="e.g. Vacation / Courier off">
-                    </div>
-                    <button type="button" class="button schedulify-remove-range" title="Delete Range">
-                        <span class="dashicons dashicons-trash"></span>
-                    </button>
-                </div>
-            `;
-
-            const $newRow = $(rangeHtml);
-            $list.append($newRow);
-            $newRow.fadeIn(150);
-        }
-
         // Remove Date Range (General & Zone)
         $(document).on('click', '.schedulify-remove-range', function () {
             const $row = $(this).closest('.schedulify-range-row');
@@ -105,7 +81,7 @@
         // ==========================================
         function updateZoneCardsVisibility(currentRuleId) {
             currentRuleId = currentRuleId || '';
-            const zoneRules = ((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).zoneRules) || [];
+            const zoneRules = adminData.zoneRules || [];
             const assignedZones = new Set();
 
             zoneRules.forEach(function (r) {
@@ -215,10 +191,14 @@
         const $btnNext = $('#schedulify-modal-btn-next');
         const $btnSave = $('#schedulify-modal-btn-save');
 
-        function openModal(isEdit = false) {
+        let currentEditingRule = null;
+        let currentShippingAjax = null;
+
+        function openModal(isEdit) {
             $modal.fadeIn(150);
             $('body').addClass('modal-open');
             if (!isEdit) {
+                currentEditingRule = null;
                 resetModalForm();
                 goToStep(1);
             }
@@ -227,6 +207,7 @@
         function closeModal() {
             $modal.fadeOut(150);
             $('body').removeClass('modal-open');
+            currentEditingRule = null;
         }
 
         function goToStep(step, targetMethodId) {
@@ -253,12 +234,8 @@
                     }
                 });
 
-                const selectedMethod = (targetMethodId !== undefined && targetMethodId !== null)
-                    ? targetMethodId
-                    : ($('#schedulify_zone_shipping_method').val() || '');
-
-                // Dynamically fetch and populate shipping methods via AJAX
-                fetchShippingMethods(selectedDistricts, selectedMethod);
+                // Fetch shipping methods and render dynamic tabs
+                fetchShippingMethodsAndRenderTabs(selectedDistricts, targetMethodId);
 
                 $step1.hide();
                 $step2.fadeIn(150);
@@ -270,75 +247,301 @@
         }
 
         // ==========================================
-        // DYNAMIC SHIPPING METHODS VIA AJAX
+        // DYNAMIC TABS RENDERING VIA AJAX
         // ==========================================
-        let currentShippingAjax = null;
-
-        function fetchShippingMethods(selectedZones, targetMethodId) {
-            const $select = $('#schedulify_zone_shipping_method');
-            targetMethodId = targetMethodId || '';
+        function fetchShippingMethodsAndRenderTabs(selectedZones, targetMethodId) {
+            const $tabsNav = $('#schedulify-method-tabs-nav');
+            const $tabsContent = $('#schedulify-method-tabs-content');
 
             if (currentShippingAjax && currentShippingAjax.readyState !== 4) {
                 currentShippingAjax.abort();
             }
 
-            $select.prop('disabled', true).html('<option value="" disabled selected>⏳ Loading shipping methods...</option>');
+            const loadingText = i18n.loadingMethods || 'Loading shipping methods...';
+            $tabsNav.html('<div class="schedulify-methods-loading"><span class="spinner is-active" style="float:none; margin:0 8px 0 0; visibility:visible;"></span> ' + loadingText + '</div>');
+            $tabsContent.empty();
 
             currentShippingAjax = $.ajax({
-                url: ((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).ajax_url) || ajaxurl,
+                url: adminData.ajax_url || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
                 type: 'POST',
                 dataType: 'json',
                 data: {
                     action: 'schedulify_get_shipping_methods_by_zones',
-                    nonce: ((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).nonce) || '',
+                    nonce: adminData.nonce || '',
                     zones: selectedZones || [],
-                    current_method: targetMethodId
+                    current_method: targetMethodId || (currentEditingRule ? currentEditingRule.shipping_method_id : '')
                 },
                 success: function (res) {
-                    $select.empty();
-                    $select.append('<option value="" disabled selected>-- Select Shipping Method --</option>');
+                    $tabsNav.empty();
+                    $tabsContent.empty();
 
-                    if (res && res.success && res.data && res.data.methods && res.data.methods.length > 0) {
-                        let matchFound = false;
-                        res.data.methods.forEach(function (m) {
-                            const $opt = $('<option></option>')
-                                .val(m.id)
-                                .text(m.label)
-                                .attr('data-title', m.title || '')
-                                .attr('data-zone-name', m.zone_name || '');
+                    const methods = (res && res.success && res.data && res.data.methods) ? res.data.methods : [];
+                    const existingRules = (res && res.success && res.data && res.data.existing_rules) ? res.data.existing_rules : {};
 
-                            if (targetMethodId && m.id === targetMethodId) {
-                                $opt.prop('selected', true);
-                                matchFound = true;
-                            }
-                            $select.append($opt);
-                        });
-
-                        if (matchFound) {
-                            $select.val(targetMethodId);
-                        } else if (res.data.methods.length === 1) {
-                            $select.val(res.data.methods[0].id);
-                        } else {
-                            $select.val('');
-                        }
-                    } else {
-                        $select.append('<option value="" disabled>No shipping methods found</option>');
+                    if (methods.length === 0) {
+                        const noFoundText = i18n.noMethodsFound || 'No shipping methods found for the selected zone(s).';
+                        $tabsNav.html('<div class="schedulify-empty-methods-notice"><span class="dashicons dashicons-warning"></span> ' + noFoundText + '</div>');
+                        return;
                     }
 
-                    const selTitle = $select.find('option:selected').data('title') || '';
-                    $('#schedulify_zone_shipping_method_title').val(selTitle);
-                    $select.prop('disabled', false);
+                    // Determine active tab
+                    let activeMethodKey = '';
+                    if (targetMethodId) {
+                        for (let i = 0; i < methods.length; i++) {
+                            if (methods[i].id === targetMethodId) {
+                                activeMethodKey = targetMethodId;
+                                break;
+                            }
+                        }
+                    }
+                    if (!activeMethodKey && currentEditingRule) {
+                        for (let i = 0; i < methods.length; i++) {
+                            if (methods[i].id === currentEditingRule.shipping_method_id) {
+                                activeMethodKey = currentEditingRule.shipping_method_id;
+                                break;
+                            }
+                        }
+                    }
+                    if (!activeMethodKey) {
+                        activeMethodKey = methods[0].id;
+                    }
+
+                    // Render Tabs and Panes
+                    methods.forEach(function (m, idx) {
+                        const safeId = m.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+                        const isActive = (m.id === activeMethodKey);
+
+                        // Check if rule data exists
+                        let savedRule = null;
+                        if (currentEditingRule && currentEditingRule.methods && currentEditingRule.methods[m.id]) {
+                            savedRule = currentEditingRule.methods[m.id];
+                        } else if (existingRules && existingRules[m.id]) {
+                            savedRule = existingRules[m.id];
+                        } else if (currentEditingRule && (currentEditingRule.shipping_method_id === m.id || currentEditingRule.shipping_method_id === 'all')) {
+                            savedRule = currentEditingRule;
+                        }
+
+                        const savedDelay = (savedRule && savedRule.delay_hours !== undefined) ? savedRule.delay_hours : '0';
+                        const savedOffDays = (savedRule && Array.isArray(savedRule.off_days)) ? savedRule.off_days.map(Number) : [];
+                        const savedBlackout = (savedRule && savedRule.blackout_dates) ? savedRule.blackout_dates : '';
+                        const savedAllowed = (savedRule && savedRule.allowed_dates) ? savedRule.allowed_dates : '';
+                        const savedRanges = (savedRule && Array.isArray(savedRule.disabled_date_ranges)) ? savedRule.disabled_date_ranges : [];
+                        const savedRuleId = (savedRule && savedRule.id) ? savedRule.id : '';
+
+                        // 1. Tab Button
+                        const $tabBtn = $(`
+                            <button type="button" class="schedulify-method-tab-btn ${isActive ? 'active' : ''}" data-target="#tab-pane-${safeId}" data-method-id="${m.id}">
+                                <span class="schedulify-tab-title-text" title="${m.title}">${m.title}</span>
+                                ${m.zone_name ? `<span class="schedulify-tab-zone-tag">${m.zone_name}</span>` : ''}
+                            </button>
+                        `);
+                        $tabsNav.append($tabBtn);
+
+                        // 2. Off-Days Checkboxes HTML
+                        let offDaysHtml = '';
+                        for (let d = 0; d <= 6; d++) {
+                            const dayLabel = daysOfWeek[d] || `Day ${d}`;
+                            const isChecked = savedOffDays.includes(d) ? 'checked' : '';
+                            offDaysHtml += `
+                                <label class="schedulify-checkbox-item">
+                                    <input type="checkbox" name="methods[${m.id}][off_days][]" value="${d}" class="schedulify-pane-off-day" ${isChecked}>
+                                    ${dayLabel}
+                                </label>
+                            `;
+                        }
+
+                        // 3. Tab Pane HTML
+                        const $pane = $(`
+                            <div class="schedulify-method-tab-pane ${isActive ? 'active' : ''}" id="tab-pane-${safeId}" data-method-id="${m.id}" data-method-title="${m.title}">
+                                <!-- Hidden fields -->
+                                <input type="hidden" name="methods[${m.id}][shipping_method_id]" value="${m.id}">
+                                <input type="hidden" name="methods[${m.id}][shipping_method_title]" value="${m.title}">
+                                <input type="hidden" name="methods[${m.id}][rule_id]" value="${savedRuleId}" class="schedulify-pane-rule-id">
+
+                                <!-- Pane Fields Container -->
+                                <div class="schedulify-pane-fields-body">
+                                    <!-- Delivery Delay Hours -->
+                                    <div class="schedulify-form-row schedulify-highlight-field">
+                                        <label>
+                                            <strong>${i18n.delayHours || 'Delivery Delay (in Hours)'} <span class="required">*</span></strong>
+                                        </label>
+                                        <div class="schedulify-delay-input-group">
+                                            <input type="number" 
+                                                   name="methods[${m.id}][delay_hours]" 
+                                                   class="schedulify-pane-delay regular-text" 
+                                                   min="0" 
+                                                   step="1" 
+                                                   value="${savedDelay}" 
+                                                   placeholder="e.g. 0 for Same-Day, 24 for Standard"
+                                                   required>
+                                            <span class="schedulify-input-unit">${i18n.hoursUnit || 'Hours'}</span>
+                                        </div>
+                                        <p class="description">
+                                            ${i18n.sameDayHint || 'Earliest available delivery date based on (Current Time + Delay Hours). 0 = Same-Day allowed, 24 = Next Day, 48 = 2 Days Lead Time.'}
+                                        </p>
+                                    </div>
+
+                                    <!-- Weekly Off-Days -->
+                                    <div class="schedulify-form-row">
+                                        <label><strong>${i18n.weeklyOffDays || 'Weekly Off-Days'}</strong></label>
+                                        <fieldset class="schedulify-checkbox-grid">
+                                            ${offDaysHtml}
+                                        </fieldset>
+                                        <p class="description">Selected days will be blocked in the calendar for customers choosing this shipping method.</p>
+                                    </div>
+
+                                    <!-- Disabled Date Ranges -->
+                                    <div class="schedulify-form-row">
+                                        <label><strong>${i18n.disabledRanges || 'Disabled Date Ranges'}</strong></label>
+                                        <div class="schedulify-ranges-container" data-method-id="${m.id}">
+                                            <div class="schedulify-ranges-list"></div>
+                                            <button type="button" class="button button-secondary schedulify-pane-add-range" data-method-id="${m.id}">
+                                                <span class="dashicons dashicons-plus-alt2"></span> ${i18n.addDateRange || 'Add Date Range'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Blackout Dates -->
+                                    <div class="schedulify-form-row">
+                                        <label><strong>${i18n.blackoutDates || 'Blackout / Holiday Dates'}</strong></label>
+                                        <textarea name="methods[${m.id}][blackout_dates]" rows="2" class="schedulify-pane-blackout large-text code" placeholder="2026-12-16, 2026-12-25">${savedBlackout}</textarea>
+                                        <p class="description">Comma or newline separated dates (YYYY-MM-DD) when delivery is not available for this method.</p>
+                                    </div>
+
+                                    <!-- Allowed Dates Exceptions -->
+                                    <div class="schedulify-form-row">
+                                        <label><strong>${i18n.allowedDates || 'Allowed Delivery Dates (Exceptions)'}</strong></label>
+                                        <textarea name="methods[${m.id}][allowed_dates]" rows="2" class="schedulify-pane-allowed large-text code" placeholder="2026-03-15, 2026-03-30">${savedAllowed}</textarea>
+                                        <p class="description">Comma or newline separated dates (YYYY-MM-DD) that should always be allowed regardless of off-days.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+
+                        // Populate existing date ranges in this pane
+                        const $rangesList = $pane.find('.schedulify-ranges-list');
+                        if (savedRanges && savedRanges.length > 0) {
+                            savedRanges.forEach(function (range) {
+                                addPaneRangeRow($rangesList, m.id, range.start || '', range.end || '', range.reason || '');
+                            });
+                        }
+
+                        $tabsContent.append($pane);
+                    });
                 },
                 error: function (xhr, status) {
                     if (status !== 'abort') {
-                        $select.empty();
-                        $select.append('<option value="" disabled selected>-- Select Shipping Method --</option>');
-                        $select.append('<option value="" disabled>Could not load methods. Please retry.</option>');
-                        $select.prop('disabled', false);
+                        $tabsNav.html('<div class="schedulify-empty-methods-notice error"><span class="dashicons dashicons-warning"></span> Could not load shipping methods. Please retry.</div>');
                     }
                 }
             });
         }
+
+        // Helper to add date range row for a specific method tab
+        function addPaneRangeRow($list, methodId, start, end, reason) {
+            start = start || '';
+            end = end || '';
+            reason = reason || '';
+            const newIndex = new Date().getTime() + Math.floor(Math.random() * 1000);
+            const rangeHtml = `
+                <div class="schedulify-range-row" style="display:none;">
+                    <div class="schedulify-range-field">
+                        <label>From:</label>
+                        <input type="date" name="methods[${methodId}][disabled_date_ranges][${newIndex}][start]" value="${start}" required>
+                    </div>
+                    <div class="schedulify-range-field">
+                        <label>To:</label>
+                        <input type="date" name="methods[${methodId}][disabled_date_ranges][${newIndex}][end]" value="${end}" required>
+                    </div>
+                    <div class="schedulify-range-field schedulify-range-reason">
+                        <label>Reason (Optional):</label>
+                        <input type="text" name="methods[${methodId}][disabled_date_ranges][${newIndex}][reason]" value="${reason}" placeholder="e.g. Vacation / Courier off">
+                    </div>
+                    <button type="button" class="button schedulify-remove-range" title="Delete Range">
+                        <span class="dashicons dashicons-trash"></span>
+                    </button>
+                </div>
+            `;
+            const $newRow = $(rangeHtml);
+            $list.append($newRow);
+            $newRow.fadeIn(150);
+        }
+
+        // Add range in tab pane
+        $(document).on('click', '.schedulify-pane-add-range', function () {
+            const methodId = $(this).data('method-id');
+            const $list = $(this).closest('.schedulify-ranges-container').find('.schedulify-ranges-list');
+            addPaneRangeRow($list, methodId);
+        });
+
+        // Tab Switch Button Click
+        $(document).on('click', '.schedulify-method-tab-btn', function () {
+            const targetSelector = $(this).data('target');
+
+            $('.schedulify-method-tab-btn').removeClass('active');
+            $(this).addClass('active');
+
+            $('.schedulify-method-tab-pane').removeClass('active');
+            $(targetSelector).addClass('active');
+        });
+
+        // "Copy Settings to All Methods" Button
+        $(document).on('click', '.schedulify-btn-copy-to-all', function () {
+            const $sourcePane = $(this).closest('.schedulify-method-tab-pane');
+            const sourceDelay = $sourcePane.find('.schedulify-pane-delay').val();
+            const sourceOffDays = [];
+            $sourcePane.find('.schedulify-pane-off-day:checked').each(function () {
+                sourceOffDays.push($(this).val());
+            });
+            const sourceBlackout = $sourcePane.find('.schedulify-pane-blackout').val();
+            const sourceAllowed = $sourcePane.find('.schedulify-pane-allowed').val();
+
+            // Collect date ranges
+            const sourceRanges = [];
+            $sourcePane.find('.schedulify-range-row').each(function () {
+                const start = $(this).find('input[type="date"]').eq(0).val();
+                const end = $(this).find('input[type="date"]').eq(1).val();
+                const reason = $(this).find('input[type="text"]').val();
+                if (start && end) {
+                    sourceRanges.push({ start: start, end: end, reason: reason });
+                }
+            });
+
+            // Copy to all other panes
+            $('.schedulify-method-tab-pane').each(function () {
+                if ($(this).is($sourcePane)) return;
+
+                const $targetPane = $(this);
+                const targetMethodId = $targetPane.data('method-id');
+
+                // Set delay
+                $targetPane.find('.schedulify-pane-delay').val(sourceDelay);
+
+                // Set off-days
+                $targetPane.find('.schedulify-pane-off-day').each(function () {
+                    $(this).prop('checked', sourceOffDays.includes($(this).val()));
+                });
+
+                // Set blackout and allowed dates
+                $targetPane.find('.schedulify-pane-blackout').val(sourceBlackout);
+                $targetPane.find('.schedulify-pane-allowed').val(sourceAllowed);
+
+                // Replicate date ranges
+                const $targetList = $targetPane.find('.schedulify-ranges-list');
+                $targetList.empty();
+                sourceRanges.forEach(function (r) {
+                    addPaneRangeRow($targetList, targetMethodId, r.start, r.end, r.reason);
+                });
+            });
+
+            // Show temporary toast feedback on the button
+            const $btn = $(this);
+            const originalHtml = $btn.html();
+            $btn.html('<span class="dashicons dashicons-yes-alt" style="color:#16a34a;"></span> ' + (i18n.copySuccess || 'Copied!'));
+            setTimeout(function () {
+                $btn.html(originalHtml);
+            }, 2000);
+        });
 
         // Navigate between steps via step indicator
         $(document).on('click', '.schedulify-step-dot[data-step="1"]', function () {
@@ -348,7 +551,7 @@
         $(document).on('click', '.schedulify-step-dot[data-step="2"]', function () {
             const checkedCount = $('.schedulify-district-checkbox:checked').length;
             if (checkedCount === 0) {
-                alert(((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).i18n && (window.schedulifyAdminData || window.schedulifyAdminData).i18n.selectZoneError) || 'Please select at least one zone.');
+                alert(i18n.selectZoneError || 'Please select at least one zone.');
                 return;
             }
             goToStep(2);
@@ -374,31 +577,21 @@
                 if (remainingDistricts.length === 0) {
                     goToStep(1);
                 } else {
-                    fetchShippingMethods(remainingDistricts, $('#schedulify_zone_shipping_method').val() || '');
+                    fetchShippingMethodsAndRenderTabs(remainingDistricts);
                 }
             });
         });
 
         function resetModalForm() {
-            $('#schedulify_modal-title').text('Add Zone Delivery Rule');
+            currentEditingRule = null;
+            $('#schedulify-modal-title').text('Add Zone Delivery Rule');
             $('#schedulify_rule_id').val('');
             $('#schedulify-district-search').val('');
             $('.schedulify-district-checkbox').prop('checked', false).closest('.schedulify-district-card').removeClass('selected');
             updateZoneCardsVisibility('');
-            $('#schedulify_zone_shipping_method').empty().append('<option value="" disabled selected>-- Select Shipping Method --</option>');
-            $('#schedulify_zone_shipping_method_title').val('');
-            $('#schedulify_zone_delay_hours').val('');
-            $('.schedulify-zone-off-day').prop('checked', false);
-            $('#schedulify_zone_blackout').val('');
-            $('#schedulify_zone_allowed').val('');
-            $('#schedulify-zone-ranges-list').empty();
+            $('#schedulify-method-tabs-nav').empty();
+            $('#schedulify-method-tabs-content').empty();
         }
-
-        // Update hidden shipping method title when shipping method select changes
-        $(document).on('change', '#schedulify_zone_shipping_method', function () {
-            const title = $(this).find('option:selected').data('title') || '';
-            $('#schedulify_zone_shipping_method_title').val(title);
-        });
 
         // Open Modal (Add New)
         $(document).on('click', '.schedulify-open-zone-modal, #schedulify-btn-add-zone', function () {
@@ -414,13 +607,13 @@
         $btnNext.on('click', function () {
             const checkedCount = $('.schedulify-district-checkbox:checked').length;
             if (checkedCount === 0) {
-                alert(((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).i18n && (window.schedulifyAdminData || window.schedulifyAdminData).i18n.selectZoneError) || 'Please select at least one zone.');
+                alert(i18n.selectZoneError || 'Please select at least one zone.');
                 return;
             }
             goToStep(2);
         });
 
-        // Edit Zone Rule Click
+        // Edit Zone Rule Click from Table
         $(document).on('click', '.schedulify-edit-rule', function (e) {
             e.preventDefault();
             const $tr = $(this).closest('tr');
@@ -429,9 +622,10 @@
 
             try {
                 const rule = JSON.parse(ruleJson);
+                currentEditingRule = rule;
                 resetModalForm();
 
-                $('#schedulify_modal-title').text('Edit Zone Delivery Rule');
+                $('#schedulify-modal-title').text('Edit Zone Delivery Rule');
                 $('#schedulify_rule_id').val(rule.id || '');
 
                 // Show cards for current rule + unassigned, hide cards assigned to other rules
@@ -441,31 +635,10 @@
                 const districts = rule.districts || [];
                 $('.schedulify-district-checkbox').each(function () {
                     const dval = $(this).val();
-                    if (districts.includes(dval)) {
+                    if (districts.indexOf(dval) !== -1) {
                         $(this).prop('checked', true).closest('.schedulify-district-card').addClass('selected');
                     }
                 });
-
-                // Populate Step 2 fields
-                $('#schedulify_zone_shipping_method_title').val(rule.shipping_method_title || '');
-                $('#schedulify_zone_delay_hours').val(rule.delay_hours !== undefined ? rule.delay_hours : '');
-
-                const offDays = (rule.off_days || []).map(Number);
-                $('.schedulify-zone-off-day').each(function () {
-                    const dayVal = parseInt($(this).val(), 10);
-                    $(this).prop('checked', offDays.includes(dayVal));
-                });
-
-                $('#schedulify_zone_blackout').val(rule.blackout_dates || '');
-                $('#schedulify_zone_allowed').val(rule.allowed_dates || '');
-
-                // Populate Date Ranges
-                $('#schedulify-zone-ranges-list').empty();
-                if (rule.disabled_date_ranges && Array.isArray(rule.disabled_date_ranges)) {
-                    rule.disabled_date_ranges.forEach(function (range) {
-                        addZoneRangeRow(range.start || '', range.end || '', range.reason || '');
-                    });
-                }
 
                 openModal(true);
                 goToStep(2, rule.shipping_method_id || '');
@@ -479,39 +652,48 @@
             const checkedCount = $('.schedulify-district-checkbox:checked').length;
             if (checkedCount === 0) {
                 e.preventDefault();
-                alert(((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).i18n && (window.schedulifyAdminData || window.schedulifyAdminData).i18n.selectZoneError) || 'Please select at least one zone.');
+                alert(i18n.selectZoneError || 'Please select at least one zone.');
                 goToStep(1);
                 return false;
             }
 
-            // Validate Shipping Method
-            const methodVal = ($('#schedulify_zone_shipping_method').val() || '').trim();
-            if (!methodVal) {
+            const $panes = $('.schedulify-method-tab-pane');
+            if ($panes.length === 0) {
                 e.preventDefault();
-                alert(((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).i18n && (window.schedulifyAdminData || window.schedulifyAdminData).i18n.methodRequired) || 'Please select a shipping method.');
+                alert(i18n.noMethodsFound || 'No shipping methods available to configure.');
                 goToStep(2);
-                $('#schedulify_zone_shipping_method').focus();
                 return false;
             }
 
-            // Sync shipping method title
-            const methodTitle = $('#schedulify_zone_shipping_method option:selected').data('title') || '';
-            $('#schedulify_zone_shipping_method_title').val(methodTitle);
+            // Validate that every pane has a valid delay hours number
+            let hasError = false;
+            $panes.each(function () {
+                const $pane = $(this);
+                const delayVal = ($pane.find('.schedulify-pane-delay').val() || '').trim();
+                const delayNum = parseInt(delayVal, 10);
 
-            const delayVal = ($('#schedulify_zone_delay_hours').val() || '').trim();
-            const delayNum = parseInt(delayVal, 10);
-            if (delayVal === '' || isNaN(delayNum) || delayNum < 0) {
-                e.preventDefault();
-                alert(((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).i18n && (window.schedulifyAdminData || window.schedulifyAdminData).i18n.delayRequired) || 'Please enter a valid Delivery Delay in Hours (0 or more).');
-                goToStep(2);
-                $('#schedulify_zone_delay_hours').focus();
+                if (delayVal === '' || isNaN(delayNum) || delayNum < 0) {
+                    e.preventDefault();
+                    hasError = true;
+                    alert(i18n.delayRequired || 'Please enter a valid Delivery Delay in Hours (0 or more) for all shipping methods.');
+                    goToStep(2);
+
+                    // Switch to this pane
+                    const targetId = '#' + $pane.attr('id');
+                    $(`.schedulify-method-tab-btn[data-target="${targetId}"]`).trigger('click');
+                    $pane.find('.schedulify-pane-delay').focus();
+                    return false;
+                }
+            });
+
+            if (hasError) {
                 return false;
             }
         });
 
         // Delete Zone Rule Confirmation
         $(document).on('click', '.schedulify-delete-rule', function (e) {
-            const confirmMsg = ((window.schedulifyAdminData || window.schedulifyAdminData) && (window.schedulifyAdminData || window.schedulifyAdminData).i18n && (window.schedulifyAdminData || window.schedulifyAdminData).i18n.confirmDelete) || 'Are you sure you want to delete this zone rule?';
+            const confirmMsg = i18n.confirmDelete || 'Are you sure you want to delete this zone rule?';
             if (!confirm(confirmMsg)) {
                 e.preventDefault();
             }

@@ -53,6 +53,7 @@ class Schedulify_DB {
             disabled_date_ranges longtext DEFAULT NULL,
             blackout_dates text DEFAULT NULL,
             allowed_dates text DEFAULT NULL,
+            methods longtext DEFAULT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
@@ -62,6 +63,12 @@ class Schedulify_DB {
 
         dbDelta($sql_settings);
         dbDelta($sql_zone_rules);
+
+        // Ensure methods column exists on existing installations
+        $has_methods_col = $wpdb->get_results("SHOW COLUMNS FROM `{$zone_rules_table}` LIKE 'methods'");
+        if (empty($has_methods_col)) {
+            $wpdb->query("ALTER TABLE `{$zone_rules_table}` ADD COLUMN `methods` longtext DEFAULT NULL AFTER `allowed_dates`");
+        }
 
         // Auto-migrate legacy data from wp_options or older schedulify tables if exists
         self::maybe_migrate_legacy_data();
@@ -233,16 +240,34 @@ class Schedulify_DB {
 
         $rules = [];
         foreach ($rows as $row) {
+            $methods_unserialized = !empty($row['methods']) ? (array) maybe_unserialize($row['methods']) : [];
+            $m_id = !empty($row['shipping_method_id']) ? $row['shipping_method_id'] : 'all';
+            $m_title = $row['shipping_method_title'] ?? '';
+
+            // If methods array is empty, construct a fallback single-method entry from top columns
+            if (empty($methods_unserialized)) {
+                $methods_unserialized[$m_id] = [
+                    'shipping_method_id'    => $m_id,
+                    'shipping_method_title' => $m_title,
+                    'delay_hours'           => intval($row['delay_hours']),
+                    'off_days'              => (array) maybe_unserialize($row['off_days']),
+                    'disabled_date_ranges'  => (array) maybe_unserialize($row['disabled_date_ranges']),
+                    'blackout_dates'        => (string) ($row['blackout_dates'] ?? ''),
+                    'allowed_dates'         => (string) ($row['allowed_dates'] ?? ''),
+                ];
+            }
+
             $rules[] = [
                 'id'                    => $row['rule_uid'],
-                'shipping_method_id'    => !empty($row['shipping_method_id']) ? $row['shipping_method_id'] : 'all',
-                'shipping_method_title' => $row['shipping_method_title'] ?? '',
+                'shipping_method_id'    => $m_id,
+                'shipping_method_title' => $m_title,
                 'districts'             => (array) maybe_unserialize($row['districts']),
                 'delay_hours'           => intval($row['delay_hours']),
                 'off_days'              => (array) maybe_unserialize($row['off_days']),
                 'disabled_date_ranges'  => (array) maybe_unserialize($row['disabled_date_ranges']),
-                'blackout_dates'        => (string) $row['blackout_dates'],
-                'allowed_dates'         => (string) $row['allowed_dates'],
+                'blackout_dates'        => (string) ($row['blackout_dates'] ?? ''),
+                'allowed_dates'         => (string) ($row['allowed_dates'] ?? ''),
+                'methods'               => $methods_unserialized,
             ];
         }
 
@@ -257,14 +282,30 @@ class Schedulify_DB {
         $table = self::get_zone_rules_table();
 
         $rule_uid = !empty($rule['id']) ? sanitize_text_field($rule['id']) : 'rule_' . uniqid();
+        $districts = isset($rule['districts']) ? maybe_serialize((array)$rule['districts']) : maybe_serialize([]);
+        
+        $methods = !empty($rule['methods']) && is_array($rule['methods']) ? $rule['methods'] : [];
+        $methods_serialized = !empty($methods) ? maybe_serialize($methods) : null;
+
+        // Determine top-level summary columns
         $shipping_method_id = !empty($rule['shipping_method_id']) ? sanitize_text_field($rule['shipping_method_id']) : 'all';
         $shipping_method_title = !empty($rule['shipping_method_title']) ? sanitize_text_field($rule['shipping_method_title']) : '';
-        $districts = isset($rule['districts']) ? maybe_serialize((array)$rule['districts']) : maybe_serialize([]);
-        $delay_hours = max(0, intval($rule['delay_hours'] ?? 0));
+        $delay_hours = isset($rule['delay_hours']) ? max(0, intval($rule['delay_hours'])) : 0;
         $off_days = isset($rule['off_days']) ? maybe_serialize((array)$rule['off_days']) : maybe_serialize([]);
         $disabled_date_ranges = isset($rule['disabled_date_ranges']) ? maybe_serialize((array)$rule['disabled_date_ranges']) : maybe_serialize([]);
         $blackout_dates = sanitize_textarea_field($rule['blackout_dates'] ?? '');
         $allowed_dates = sanitize_textarea_field($rule['allowed_dates'] ?? '');
+
+        // If multiple methods exist, grab first method as primary summary if top level is default
+        if (!empty($methods)) {
+            $first_m = reset($methods);
+            if (empty($shipping_method_title) && !empty($first_m['shipping_method_title'])) {
+                $shipping_method_title = $first_m['shipping_method_title'];
+            }
+            if (!isset($rule['delay_hours']) && isset($first_m['delay_hours'])) {
+                $delay_hours = max(0, intval($first_m['delay_hours']));
+            }
+        }
 
         // Check if rule already exists by rule_uid
         $existing_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$table} WHERE rule_uid = %s", $rule_uid));
@@ -276,13 +317,14 @@ class Schedulify_DB {
             'districts'             => $districts,
             'delay_hours'           => $delay_hours,
             'off_days'              => $off_days,
-            'disabled_date_ranges'  => $disabled_date_ranges,
+            'disabled_date_ranges'  => $disabled_ranges ?? $disabled_date_ranges,
             'blackout_dates'        => $blackout_dates,
             'allowed_dates'         => $allowed_dates,
+            'methods'               => $methods_serialized,
             'updated_at'            => current_time('mysql'),
         ];
 
-        $format = ['%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s'];
+        $format = ['%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s'];
 
         if ($existing_id) {
             $wpdb->update($table, $data, ['id' => $existing_id], $format, ['%d']);

@@ -291,15 +291,28 @@
     font-weight: 600;
 }
 
-.schedulify-badge-method.all {
-    background: #faf5ff;
-    color: #7e22ce;
-    border-color: #e9d5ff;
-}
-
 .schedulify-text-muted {
     color: #94a3b8;
     font-size: 13px;
+}
+
+/* Multi-method cell alignment */
+.schedulify-cell-methods-list,
+.schedulify-cell-delays-list,
+.schedulify-cell-offdays-list,
+.schedulify-cell-blackouts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.schedulify-cell-method-item,
+.schedulify-cell-delay-item,
+.schedulify-cell-offday-item,
+.schedulify-cell-blackout-item {
+    min-height: 28px;
+    display: flex;
+    align-items: center;
 }
 
 /* Empty State */
@@ -735,4 +748,206 @@
     margin-top: 25px;
     display: flex;
     justify-content: flex-start;
+}
+
+/* ========================================================
+   SHIPPING METHOD TABS & PANELS (MODAL STEP 2)
+   ======================================================== */
+.schedulify-methods-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.schedulify-methods-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
+    margin-bottom: 4px;
+}
+
+.schedulify-methods-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.schedulify-methods-header-title .dashicons {
+    color: #2563eb;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.schedulify-methods-header .description {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* Tab Navigation Bar */
+.schedulify-method-tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 8px;
+}
+
+.schedulify-method-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    color: #475569;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    top: 2px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.schedulify-method-tab-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #94a3b8;
+}
+
+.schedulify-method-tab-btn.active {
+    background: #ffffff;
+    color: #2563eb;
+    border-color: #2563eb;
+    border-bottom: 2.5px solid #ffffff;
+    box-shadow: 0 -3px 8px rgba(37, 99, 235, 0.08);
+    z-index: 2;
+}
+
+.schedulify-tab-zone-tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    background: #e2e8f0;
+    color: #475569;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.schedulify-method-tab-btn.active .schedulify-tab-zone-tag {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.schedulify-tab-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.schedulify-method-tab-btn.is-enabled .schedulify-tab-status-dot {
+    background: #16a34a;
+    box-shadow: 0 0 6px rgba(22, 163, 74, 0.4);
+}
+
+/* Loading & Empty State for Tabs */
+.schedulify-methods-loading {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.schedulify-empty-methods-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 20px;
+    background: #fffbeb;
+    border: 1px solid #fef3c7;
+    border-radius: 8px;
+    color: #92400e;
+    font-size: 13.5px;
+}
+
+/* Tab Panes */
+.schedulify-method-tabs-content {
+    background: #ffffff;
+    min-height: 280px;
+}
+
+.schedulify-method-tab-pane {
+    display: none;
+    flex-direction: column;
+    gap: 18px;
+    animation: schedulifyFadeIn 0.2s ease-in-out;
+}
+
+.schedulify-method-tab-pane.active {
+    display: flex;
+}
+
+@keyframes schedulifyFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Pane Body */
+.schedulify-pane-fields-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* Copy to All Button */
+.schedulify-btn-copy-to-all {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.15s ease;
+}
+
+.schedulify-btn-copy-to-all:hover {
+    color: #2563eb !important;
+    border-color: #93c5fd !important;
+    background: #eff6ff !important;
+}
+
+.schedulify-btn-copy-to-all .dashicons {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: #64748b;
+}
+
+/* Pane Body */
+.schedulify-pane-fields-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }

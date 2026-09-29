@@ -110,33 +110,7 @@
         }
 
         let foundRule = null;
-
-        // 1. Priority: Match District + Specific Shipping Method
-        if (shippingMethod) {
-            for (let r of zone_rules) {
-                const dList = r.districts || [];
-                const rMethod = r.shipping_method_id || 'all';
-                if (dList.includes(districtCode) && rMethod !== 'all' && (rMethod === shippingMethod || shippingMethod.startsWith(rMethod))) {
-                    foundRule = r;
-                    break;
-                }
-            }
-        }
-
-        // 2. Priority: Match District + All Shipping Methods
-        if (!foundRule) {
-            for (let r of zone_rules) {
-                const dList = r.districts || [];
-                const rMethod = r.shipping_method_id || 'all';
-                if (dList.includes(districtCode) && rMethod === 'all') {
-                    foundRule = r;
-                    break;
-                }
-            }
-        }
-
-        // 3. Fallback: Any matching district rule
-        if (!foundRule) {
+        if (districtCode) {
             for (let r of zone_rules) {
                 const dList = r.districts || [];
                 if (dList.includes(districtCode)) {
@@ -152,15 +126,42 @@
         const generalRanges = (settings && settings.disabled_date_ranges) || (active_rule && active_rule.disabled_date_ranges) || [];
 
         if (foundRule) {
+            let matchedMethod = null;
+            const methods = foundRule.methods || {};
+
+            if (shippingMethod && Object.keys(methods).length > 0) {
+                if (methods[shippingMethod]) {
+                    matchedMethod = methods[shippingMethod];
+                } else {
+                    for (let mk in methods) {
+                        if (mk === shippingMethod || shippingMethod.startsWith(mk) || mk.startsWith(shippingMethod)) {
+                            matchedMethod = methods[mk];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!matchedMethod && Object.keys(methods).length > 0) {
+                const firstKey = Object.keys(methods)[0];
+                matchedMethod = methods[firstKey];
+            }
+
+            const ruleDelay = matchedMethod && matchedMethod.delay_hours !== undefined ? matchedMethod.delay_hours : (foundRule.delay_hours !== undefined ? foundRule.delay_hours : 0);
+            const ruleOffDays = matchedMethod && Array.isArray(matchedMethod.off_days) && matchedMethod.off_days.length > 0 ? matchedMethod.off_days : (foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays);
+            const ruleRanges = matchedMethod && Array.isArray(matchedMethod.disabled_date_ranges) && matchedMethod.disabled_date_ranges.length > 0 ? matchedMethod.disabled_date_ranges : (foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges);
+            const ruleBlackout = matchedMethod && matchedMethod.blackout_dates && String(matchedMethod.blackout_dates).trim() !== '' ? matchedMethod.blackout_dates : (foundRule.blackout_dates && String(foundRule.blackout_dates).trim() !== '' ? foundRule.blackout_dates : generalBlackout);
+            const ruleAllowed = matchedMethod && matchedMethod.allowed_dates && String(matchedMethod.allowed_dates).trim() !== '' ? matchedMethod.allowed_dates : (foundRule.allowed_dates && String(foundRule.allowed_dates).trim() !== '' ? foundRule.allowed_dates : generalAllowed);
+
             currentActiveRule = {
                 id: foundRule.id || '',
-                shipping_method_id: foundRule.shipping_method_id || '',
-                shipping_method_title: foundRule.shipping_method_title || '',
-                delay_hours: foundRule.delay_hours !== undefined ? foundRule.delay_hours : 0,
-                off_days: (foundRule.off_days && foundRule.off_days.length > 0) ? foundRule.off_days : generalOffDays,
-                disabled_date_ranges: (foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0) ? foundRule.disabled_date_ranges : generalRanges,
-                blackout_dates: (foundRule.blackout_dates && String(foundRule.blackout_dates).trim() !== '') ? foundRule.blackout_dates : generalBlackout,
-                allowed_dates: (foundRule.allowed_dates && String(foundRule.allowed_dates).trim() !== '') ? foundRule.allowed_dates : generalAllowed,
+                shipping_method_id: matchedMethod ? (matchedMethod.shipping_method_id || '') : (foundRule.shipping_method_id || ''),
+                shipping_method_title: matchedMethod ? (matchedMethod.shipping_method_title || '') : (foundRule.shipping_method_title || ''),
+                delay_hours: ruleDelay,
+                off_days: ruleOffDays,
+                disabled_date_ranges: ruleRanges,
+                blackout_dates: ruleBlackout,
+                allowed_dates: ruleAllowed,
             };
             currentMatrixKey = foundRule.id || 'general_default';
         } else {

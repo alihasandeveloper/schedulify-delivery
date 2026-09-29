@@ -111,32 +111,7 @@ class Schedulify_Checkout {
         $zone_rules = (array)($settings['zone_rules'] ?? []);
         $found_rule = null;
 
-        // 1. Exact match: District + Specific Shipping Method
-        if (!empty($district_code) && !empty($shipping_method_id)) {
-            foreach ($zone_rules as $rule) {
-                $assigned_districts = (array)($rule['districts'] ?? []);
-                $rule_method = $rule['shipping_method_id'] ?? 'all';
-                if (in_array($district_code, $assigned_districts, true) && $rule_method !== 'all' && ($rule_method === $shipping_method_id || 0 === strpos($shipping_method_id, $rule_method))) {
-                    $found_rule = $rule;
-                    break;
-                }
-            }
-        }
-
-        // 2. Fallback: District + All Shipping Methods ('all')
-        if (!$found_rule && !empty($district_code)) {
-            foreach ($zone_rules as $rule) {
-                $assigned_districts = (array)($rule['districts'] ?? []);
-                $rule_method = $rule['shipping_method_id'] ?? 'all';
-                if (in_array($district_code, $assigned_districts, true) && $rule_method === 'all') {
-                    $found_rule = $rule;
-                    break;
-                }
-            }
-        }
-
-        // 3. Fallback: Any matching district rule
-        if (!$found_rule && !empty($district_code)) {
+        if (!empty($district_code)) {
             foreach ($zone_rules as $rule) {
                 $assigned_districts = (array)($rule['districts'] ?? []);
                 if (in_array($district_code, $assigned_districts, true)) {
@@ -147,18 +122,39 @@ class Schedulify_Checkout {
         }
 
         if ($found_rule) {
-            $rule_off_days = !empty($found_rule['off_days']) ? (array)$found_rule['off_days'] : (array)($settings['off_days'] ?? []);
-            $rule_ranges   = !empty($found_rule['disabled_date_ranges']) ? (array)$found_rule['disabled_date_ranges'] : (array)($settings['disabled_date_ranges'] ?? []);
-            $rule_blackout = (isset($found_rule['blackout_dates']) && trim($found_rule['blackout_dates']) !== '') ? $found_rule['blackout_dates'] : ($settings['blackout_dates'] ?? '');
-            $rule_allowed  = (isset($found_rule['allowed_dates']) && trim($found_rule['allowed_dates']) !== '') ? $found_rule['allowed_dates'] : ($settings['allowed_dates'] ?? '');
+            $rule_methods = !empty($found_rule['methods']) && is_array($found_rule['methods']) ? $found_rule['methods'] : [];
+            $matched_method_conf = null;
+
+            if (!empty($shipping_method_id) && !empty($rule_methods)) {
+                if (isset($rule_methods[$shipping_method_id])) {
+                    $matched_method_conf = $rule_methods[$shipping_method_id];
+                } else {
+                    foreach ($rule_methods as $mk => $mconf) {
+                        if ($mk === $shipping_method_id || 0 === strpos($shipping_method_id, $mk) || 0 === strpos($mk, $shipping_method_id)) {
+                            $matched_method_conf = $mconf;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!$matched_method_conf && !empty($rule_methods)) {
+                $matched_method_conf = reset($rule_methods);
+            }
+
+            $delay_hours = isset($matched_method_conf['delay_hours']) ? max(0, intval($matched_method_conf['delay_hours'])) : max(0, intval($found_rule['delay_hours'] ?? 0));
+            $rule_off_days = !empty($matched_method_conf['off_days']) ? (array)$matched_method_conf['off_days'] : (!empty($found_rule['off_days']) ? (array)$found_rule['off_days'] : (array)($settings['off_days'] ?? []));
+            $rule_ranges   = !empty($matched_method_conf['disabled_date_ranges']) ? (array)$matched_method_conf['disabled_date_ranges'] : (!empty($found_rule['disabled_date_ranges']) ? (array)$found_rule['disabled_date_ranges'] : (array)($settings['disabled_date_ranges'] ?? []));
+            $rule_blackout = (isset($matched_method_conf['blackout_dates']) && trim($matched_method_conf['blackout_dates']) !== '') ? $matched_method_conf['blackout_dates'] : ((isset($found_rule['blackout_dates']) && trim($found_rule['blackout_dates']) !== '') ? $found_rule['blackout_dates'] : ($settings['blackout_dates'] ?? ''));
+            $rule_allowed  = (isset($matched_method_conf['allowed_dates']) && trim($matched_method_conf['allowed_dates']) !== '') ? $matched_method_conf['allowed_dates'] : ((isset($found_rule['allowed_dates']) && trim($found_rule['allowed_dates']) !== '') ? $found_rule['allowed_dates'] : ($settings['allowed_dates'] ?? ''));
 
             return [
                 'source'                => 'zone_rule',
                 'id'                    => $found_rule['id'] ?? '',
-                'shipping_method_id'    => $found_rule['shipping_method_id'] ?? 'all',
-                'shipping_method_title' => $found_rule['shipping_method_title'] ?? '',
+                'shipping_method_id'    => $matched_method_conf['shipping_method_id'] ?? ($found_rule['shipping_method_id'] ?? 'all'),
+                'shipping_method_title' => $matched_method_conf['shipping_method_title'] ?? ($found_rule['shipping_method_title'] ?? ''),
                 'district_code'         => $district_code,
-                'delay_hours'           => max(0, intval($found_rule['delay_hours'] ?? 0)),
+                'delay_hours'           => $delay_hours,
                 'off_days'              => $rule_off_days,
                 'disabled_date_ranges'  => $rule_ranges,
                 'blackout_dates'        => $rule_blackout,
