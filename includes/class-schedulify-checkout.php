@@ -170,7 +170,7 @@ class Schedulify_Checkout {
             'shipping_method_id'    => 'all',
             'shipping_method_title' => '',
             'district_code'         => $district_code,
-            'delay_hours'           => 0,
+            'delay_hours'           => max(0, intval($settings['delay_hours'] ?? 0)),
             'off_days'              => (array)($settings['off_days'] ?? []),
             'disabled_date_ranges'  => (array)($settings['disabled_date_ranges'] ?? []),
             'blackout_dates'        => $settings['blackout_dates'] ?? '',
@@ -189,7 +189,7 @@ class Schedulify_Checkout {
 
         // General default matrix
         $general_calc = new Schedulify_Matrix_Calculator([
-            'delay_hours'          => 0,
+            'delay_hours'          => max(0, intval($settings['delay_hours'] ?? 0)),
             'max_advance_days'     => intval($settings['max_advance_days'] ?? 56),
             'off_days'             => (array)($settings['off_days'] ?? []),
             'disabled_date_ranges' => (array)($settings['disabled_date_ranges'] ?? []),
@@ -286,8 +286,13 @@ class Schedulify_Checkout {
             'rest_url'              => esc_url_raw(rest_url()),
             'rest_nonce'            => wp_create_nonce('wp_rest'),
             'settings'              => [
-                'required'         => ($settings['field_required'] ?? 'yes') === 'yes',
-                'max_advance_days' => intval($settings['max_advance_days'] ?? 56),
+                'required'             => ($settings['field_required'] ?? 'yes') === 'yes',
+                'max_advance_days'     => intval($settings['max_advance_days'] ?? 56),
+                'delay_hours'          => max(0, intval($settings['delay_hours'] ?? 0)),
+                'off_days'             => (array)($settings['off_days'] ?? []),
+                'blackout_dates'       => $settings['blackout_dates'] ?? '',
+                'allowed_dates'        => $settings['allowed_dates'] ?? '',
+                'disabled_date_ranges' => (array)($settings['disabled_date_ranges'] ?? []),
             ],
             'active_district_code'  => $active_district_code,
             'active_rule'           => $active_rule,

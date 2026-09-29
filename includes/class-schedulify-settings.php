@@ -33,6 +33,7 @@ class Schedulify_Settings {
             'enabled'              => 'yes',
             'field_required'       => 'yes',
             'field_position'       => 'woocommerce_after_order_notes',
+            'delay_hours'          => 0,
             'max_advance_days'     => 56,
             'off_days'             => [0],
             'blackout_dates'       => '',
@@ -579,6 +580,7 @@ class Schedulify_Settings {
             }
 
             $general_data = [
+                'delay_hours'          => isset($_POST['delay_hours']) ? max(0, intval($_POST['delay_hours'])) : 0,
                 'off_days'             => isset($_POST['off_days']) && is_array($_POST['off_days']) ? array_map('absint', $_POST['off_days']) : [],
                 'blackout_dates'       => sanitize_textarea_field($_POST['blackout_dates'] ?? ''),
                 'allowed_dates'        => sanitize_textarea_field($_POST['allowed_dates'] ?? ''),
@@ -808,6 +810,18 @@ class Schedulify_Settings {
                         <div class="schedulify-card-section">
                             <table class="form-table">
                                 <tr>
+                                    <th scope="row">
+                                        <label for="schedulify_general_delay_hours"><?php _e('Default Delivery Delay (in Hours)', 'schedulify-delivery'); ?></label>
+                                    </th>
+                                    <td>
+                                        <div class="schedulify-delay-input-group">
+                                            <input type="number" id="schedulify_general_delay_hours" name="delay_hours" class="regular-text" min="0" step="1" value="<?php echo esc_attr(isset($s['delay_hours']) ? intval($s['delay_hours']) : 0); ?>">
+                                            <span class="schedulify-input-unit"><?php _e('Hours', 'schedulify-delivery'); ?></span>
+                                        </div>
+                                        <p class="description"><?php _e('Set global default delivery delay in hours. This delay will be automatically applied to any shipping zone or district that does not have custom zone rules configured. (0 = Same-Day delivery allowed, 12 = 12 Hours, 24 = Next Day, 48 = 2 Days Lead Time).', 'schedulify-delivery'); ?></p>
+                                    </td>
+                                </tr>
+                                <tr>
                                     <th scope="row"><?php _e('Weekly Off-Days', 'schedulify-delivery'); ?></th>
                                     <td>
                                         <fieldset class="schedulify-checkbox-grid">
@@ -897,7 +911,7 @@ class Schedulify_Settings {
                         <div class="schedulify-empty-state">
                             <span class="dashicons dashicons-location"></span>
                             <h4><?php _e('No Zone Rules Configured Yet', 'schedulify-delivery'); ?></h4>
-                            <p><?php _e('All zones are currently using the default rules from General Settings (with 0 hours delivery delay). Click "Add Zone Rule" to create customized rules with specific delivery delays for Bogura, Dhaka, or other zones.', 'schedulify-delivery'); ?></p>
+                            <p><?php printf(__('All zones are currently using the default rules from General Settings (with %d hours delivery delay). Click "Add Zone Rule" to create customized rules with specific delivery delays for Bogura, Dhaka, or other zones.', 'schedulify-delivery'), intval($s['delay_hours'] ?? 0)); ?></p>
                             <button type="button" class="button button-secondary schedulify-open-zone-modal">
                                 <?php _e('+ Configure Your First Zone Rule', 'schedulify-delivery'); ?>
                             </button>

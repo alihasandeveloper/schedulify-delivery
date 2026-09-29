@@ -26,7 +26,8 @@
     let flatpickrInstance = null;
     let userSelectedDate = null;
     let schedulerTemplate = '';
-    let currentActiveRule = active_rule || { delay_hours: 0, off_days: [], blackout_dates: '', allowed_dates: '', disabled_date_ranges: [] };
+    const initialGeneralDelay = (settings && settings.delay_hours !== undefined) ? parseInt(settings.delay_hours, 10) : ((active_rule && active_rule.delay_hours !== undefined) ? parseInt(active_rule.delay_hours, 10) : 0);
+    let currentActiveRule = active_rule || { delay_hours: initialGeneralDelay, off_days: (settings && settings.off_days) || [], blackout_dates: (settings && settings.blackout_dates) || '', allowed_dates: (settings && settings.allowed_dates) || '', disabled_date_ranges: (settings && settings.disabled_date_ranges) || [] };
     let currentMatrixKey = (active_rule && active_rule.id) ? active_rule.id : 'general_default';
 
     /**
@@ -137,8 +138,14 @@
         const districtCode = detectCurrentDistrictCode();
         const shippingMethod = detectCurrentShippingMethod();
 
+        const generalDelay = (settings && settings.delay_hours !== undefined) ? parseInt(settings.delay_hours, 10) : ((active_rule && active_rule.delay_hours !== undefined) ? parseInt(active_rule.delay_hours, 10) : 0);
+        const generalOffDays = (settings && settings.off_days) || (active_rule && active_rule.off_days) || [];
+        const generalBlackout = (settings && settings.blackout_dates) || (active_rule && active_rule.blackout_dates) || '';
+        const generalAllowed = (settings && settings.allowed_dates) || (active_rule && active_rule.allowed_dates) || '';
+        const generalRanges = (settings && settings.disabled_date_ranges) || (active_rule && active_rule.disabled_date_ranges) || [];
+
         if (!districtCode || !zone_rules || !zone_rules.length) {
-            currentActiveRule = active_rule || { delay_hours: 0, off_days: [], blackout_dates: '', allowed_dates: '', disabled_date_ranges: [] };
+            currentActiveRule = active_rule || { delay_hours: generalDelay, off_days: generalOffDays, blackout_dates: generalBlackout, allowed_dates: generalAllowed, disabled_date_ranges: generalRanges };
             currentMatrixKey = 'general_default';
             return;
         }
@@ -153,11 +160,6 @@
                 }
             }
         }
-
-        const generalOffDays = (settings && settings.off_days) || (active_rule && active_rule.off_days) || [];
-        const generalBlackout = (settings && settings.blackout_dates) || (active_rule && active_rule.blackout_dates) || '';
-        const generalAllowed = (settings && settings.allowed_dates) || (active_rule && active_rule.allowed_dates) || '';
-        const generalRanges = (settings && settings.disabled_date_ranges) || (active_rule && active_rule.disabled_date_ranges) || [];
 
         if (foundRule) {
             let matchedMethod = null;
@@ -202,7 +204,7 @@
                 matchedMethod = methods[firstKey];
             }
 
-            const ruleDelay = matchedMethod && matchedMethod.delay_hours !== undefined ? matchedMethod.delay_hours : (foundRule.delay_hours !== undefined ? foundRule.delay_hours : 0);
+            const ruleDelay = matchedMethod && matchedMethod.delay_hours !== undefined ? matchedMethod.delay_hours : (foundRule.delay_hours !== undefined ? foundRule.delay_hours : generalDelay);
             const ruleOffDays = matchedMethod && Array.isArray(matchedMethod.off_days) ? matchedMethod.off_days : (foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays);
             const ruleRanges = matchedMethod && Array.isArray(matchedMethod.disabled_date_ranges) ? matchedMethod.disabled_date_ranges : (foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges);
             const ruleBlackout = matchedMethod && matchedMethod.blackout_dates && String(matchedMethod.blackout_dates).trim() !== '' ? matchedMethod.blackout_dates : (foundRule.blackout_dates && String(foundRule.blackout_dates).trim() !== '' ? foundRule.blackout_dates : generalBlackout);
@@ -221,7 +223,7 @@
             currentMatrixKey = foundRule.id || 'general_default';
         } else {
             currentActiveRule = {
-                delay_hours: 0,
+                delay_hours: generalDelay,
                 off_days: generalOffDays,
                 blackout_dates: generalBlackout,
                 allowed_dates: generalAllowed,
