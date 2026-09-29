@@ -785,8 +785,15 @@ class Schedulify_Settings {
         ];
         ?>
         <div class="wrap schedulify-settings-wrap">
+
+            <h1 class="wp-heading-inline">
+                <?php _e('Delivery Scheduler', 'schedulify-delivery'); ?>
+            </h1>
+            <hr class="wp-header-end">
+
             <?php settings_errors('schedulify_messages'); ?>
 
+            <!-- Native WP Tab Navigation -->
             <div class="schedulify-tabs-container">
                 <ul class="schedulify-nav-tabs">
                     <li class="<?php echo $current_tab === 'general' ? 'active' : ''; ?>" data-tab="general">
@@ -807,85 +814,93 @@ class Schedulify_Settings {
                     <form method="post" action="">
                         <?php wp_nonce_field('schedulify_general_settings_nonce_action', 'schedulify_general_settings_nonce'); ?>
 
-                        <div class="schedulify-card-section">
-                            <table class="form-table">
-                                <tr>
-                                    <th scope="row">
-                                        <label for="schedulify_general_delay_hours"><?php _e('Default Delivery Delay (in Hours)', 'schedulify-delivery'); ?></label>
-                                    </th>
-                                    <td>
-                                        <div class="schedulify-delay-input-group">
-                                            <input type="number" id="schedulify_general_delay_hours" name="delay_hours" class="regular-text" min="0" step="1" value="<?php echo esc_attr(isset($s['delay_hours']) ? intval($s['delay_hours']) : 0); ?>">
-                                            <span class="schedulify-input-unit"><?php _e('Hours', 'schedulify-delivery'); ?></span>
-                                        </div>
-                                        <p class="description"><?php _e('Set global default delivery delay in hours. This delay will be automatically applied to any shipping zone or district that does not have custom zone rules configured. (0 = Same-Day delivery allowed, 12 = 12 Hours, 24 = Next Day, 48 = 2 Days Lead Time).', 'schedulify-delivery'); ?></p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><?php _e('Weekly Off-Days', 'schedulify-delivery'); ?></th>
-                                    <td>
-                                        <fieldset class="schedulify-checkbox-grid">
-                                            <?php foreach ($days_of_week as $idx => $label) : ?>
-                                                <label class="schedulify-checkbox-item">
-                                                    <input type="checkbox" name="off_days[]" value="<?php echo esc_attr($idx); ?>" <?php checked(in_array($idx, (array)$s['off_days']), true); ?>>
-                                                    <?php echo esc_html($label); ?>
-                                                </label>
-                                            <?php endforeach; ?>
-                                        </fieldset>
-                                        <p class="description"><?php _e('Selected days of the week will be disabled in the calendar as global default off-days.', 'schedulify-delivery'); ?></p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><?php _e('Disabled Date Ranges', 'schedulify-delivery'); ?></th>
-                                    <td>
-                                        <div class="schedulify-ranges-container" id="schedulify-general-disabled-ranges">
-                                            <div class="schedulify-ranges-list">
-                                                <?php 
-                                                $saved_ranges = (array)($s['disabled_date_ranges'] ?? []);
-                                                foreach ($saved_ranges as $i => $range) : 
-                                                ?>
-                                                    <div class="schedulify-range-row">
-                                                        <div class="schedulify-range-field">
-                                                            <label><?php _e('From:', 'schedulify-delivery'); ?></label>
-                                                            <input type="date" name="disabled_date_ranges[<?php echo esc_attr($i); ?>][start]" value="<?php echo esc_attr($range['start'] ?? ''); ?>" required>
-                                                        </div>
-                                                        <div class="schedulify-range-field">
-                                                            <label><?php _e('To:', 'schedulify-delivery'); ?></label>
-                                                            <input type="date" name="disabled_date_ranges[<?php echo esc_attr($i); ?>][end]" value="<?php echo esc_attr($range['end'] ?? ''); ?>" required>
-                                                        </div>
-                                                        <div class="schedulify-range-field schedulify-range-reason">
-                                                            <label><?php _e('Reason (Optional):', 'schedulify-delivery'); ?></label>
-                                                            <input type="text" name="disabled_date_ranges[<?php echo esc_attr($i); ?>][reason]" value="<?php echo esc_attr($range['reason'] ?? ''); ?>" placeholder="<?php esc_attr_e('e.g. Vacation / Maintenance', 'schedulify-delivery'); ?>">
-                                                        </div>
-                                                        <button type="button" class="button schedulify-remove-range" title="<?php esc_attr_e('Delete Range', 'schedulify-delivery'); ?>">
-                                                            <span class="dashicons dashicons-trash"></span>
-                                                        </button>
+                        <table class="form-table" role="presentation">
+                            <tr>
+                                <th scope="row">
+                                    <label for="schedulify_general_delay_hours"><?php _e('Default Delivery Delay (in Hours)', 'schedulify-delivery'); ?></label>
+                                </th>
+                                <td>
+                                    <div class="schedulify-delay-input-group">
+                                        <input type="number"
+                                               id="schedulify_general_delay_hours"
+                                               name="delay_hours"
+                                               class="small-text"
+                                               min="0"
+                                               step="1"
+                                               value="<?php echo esc_attr(isset($s['delay_hours']) ? intval($s['delay_hours']) : 0); ?>">
+                                        <span class="schedulify-input-unit"><?php _e('Hours', 'schedulify-delivery'); ?></span>
+                                    </div>
+                                    <p class="description"><?php _e('Global default delivery delay in hours applied to any zone without a custom rule. (0 = Same-Day, 24 = Next Day, 48 = 2 Days Lead Time).', 'schedulify-delivery'); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php _e('Weekly Off-Days', 'schedulify-delivery'); ?></th>
+                                <td>
+                                    <fieldset class="schedulify-checkbox-grid">
+                                        <?php foreach ($days_of_week as $idx => $label) : ?>
+                                            <label class="schedulify-checkbox-item">
+                                                <input type="checkbox" name="off_days[]" value="<?php echo esc_attr($idx); ?>" <?php checked(in_array($idx, (array)$s['off_days']), true); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </fieldset>
+                                    <p class="description"><?php _e('Selected days will be disabled as global off-days in the delivery calendar.', 'schedulify-delivery'); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php _e('Disabled Date Ranges', 'schedulify-delivery'); ?></th>
+                                <td>
+                                    <div class="schedulify-ranges-container" id="schedulify-general-disabled-ranges">
+                                        <div class="schedulify-ranges-list">
+                                            <?php
+                                            $saved_ranges = (array)($s['disabled_date_ranges'] ?? []);
+                                            foreach ($saved_ranges as $i => $range) :
+                                            ?>
+                                                <div class="schedulify-range-row">
+                                                    <div class="schedulify-range-field">
+                                                        <label><?php _e('From:', 'schedulify-delivery'); ?></label>
+                                                        <input type="date" name="disabled_date_ranges[<?php echo esc_attr($i); ?>][start]" value="<?php echo esc_attr($range['start'] ?? ''); ?>" required>
                                                     </div>
-                                                <?php endforeach; ?>
-                                            </div>
-                                            <button type="button" class="button button-secondary schedulify-add-range">
-                                                <span class="dashicons dashicons-plus-alt2"></span> <?php _e('Add Date Range', 'schedulify-delivery'); ?>
-                                            </button>
-                                            <p class="description" style="margin-top: 8px;"><?php _e('Block all delivery dates between the specified From Date and To Date (inclusive).', 'schedulify-delivery'); ?></p>
+                                                    <div class="schedulify-range-field">
+                                                        <label><?php _e('To:', 'schedulify-delivery'); ?></label>
+                                                        <input type="date" name="disabled_date_ranges[<?php echo esc_attr($i); ?>][end]" value="<?php echo esc_attr($range['end'] ?? ''); ?>" required>
+                                                    </div>
+                                                    <div class="schedulify-range-field schedulify-range-reason">
+                                                        <label><?php _e('Reason (Optional):', 'schedulify-delivery'); ?></label>
+                                                        <input type="text" name="disabled_date_ranges[<?php echo esc_attr($i); ?>][reason]" value="<?php echo esc_attr($range['reason'] ?? ''); ?>" placeholder="<?php esc_attr_e('e.g. Eid Vacation', 'schedulify-delivery'); ?>">
+                                                    </div>
+                                                    <button type="button" class="button schedulify-remove-range" title="<?php esc_attr_e('Delete Range', 'schedulify-delivery'); ?>">
+                                                        <span class="dashicons dashicons-trash"></span>
+                                                    </button>
+                                                </div>
+                                            <?php endforeach; ?>
                                         </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><?php _e('Blackout / Holiday Dates', 'schedulify-delivery'); ?></th>
-                                    <td>
-                                        <textarea name="blackout_dates" rows="3" class="large-text code" placeholder="2026-12-16, 2026-12-25, 2026-03-26"><?php echo esc_textarea($s['blackout_dates'] ?? ''); ?></textarea>
-                                        <p class="description"><?php _e('Comma or newline separated list of specific holiday/blackout dates (format: YYYY-MM-DD) when delivery is not available.', 'schedulify-delivery'); ?></p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><?php _e('Allowed Delivery Dates (Exceptions)', 'schedulify-delivery'); ?></th>
-                                    <td>
-                                        <textarea name="allowed_dates" rows="2" class="large-text code" placeholder="2026-03-15, 2026-03-30"><?php echo esc_textarea($s['allowed_dates'] ?? ''); ?></textarea>
-                                        <p class="description"><?php _e('Comma or newline separated list of specific dates (format: YYYY-MM-DD) that should always be allowed for delivery regardless of off-days.', 'schedulify-delivery'); ?></p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
+                                        <button type="button" class="button schedulify-add-range">
+                                            <span class="dashicons dashicons-plus-alt2"></span> <?php _e('Add Date Range', 'schedulify-delivery'); ?>
+                                        </button>
+                                        <p class="description"><?php _e('Block all delivery dates between the specified From and To dates (inclusive).', 'schedulify-delivery'); ?></p>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="schedulify_blackout_dates"><?php _e('Blackout / Holiday Dates', 'schedulify-delivery'); ?></label>
+                                </th>
+                                <td>
+                                    <textarea id="schedulify_blackout_dates" name="blackout_dates" rows="3" class="large-text code" placeholder="2026-12-16, 2026-12-25, 2026-03-26"><?php echo esc_textarea($s['blackout_dates'] ?? ''); ?></textarea>
+                                    <p class="description"><?php _e('Comma or newline separated holiday/blackout dates (YYYY-MM-DD) when delivery is not available.', 'schedulify-delivery'); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="schedulify_allowed_dates"><?php _e('Allowed Dates (Exceptions)', 'schedulify-delivery'); ?></label>
+                                </th>
+                                <td>
+                                    <textarea id="schedulify_allowed_dates" name="allowed_dates" rows="2" class="large-text code" placeholder="2026-03-15, 2026-03-30"><?php echo esc_textarea($s['allowed_dates'] ?? ''); ?></textarea>
+                                    <p class="description"><?php _e('Comma or newline separated dates (YYYY-MM-DD) that are always open regardless of off-days.', 'schedulify-delivery'); ?></p>
+                                </td>
+                            </tr>
+                        </table>
 
                         <div class="schedulify-footer-actions">
                             <button type="submit" name="schedulify_save_general_settings" class="button button-primary">
@@ -897,10 +912,11 @@ class Schedulify_Settings {
 
                 <!-- TAB 2: ZONE SETTINGS -->
                 <div class="schedulify-tab-content <?php echo $current_tab === 'zones' ? 'active' : ''; ?>" id="schedulify-tab-zones">
+
                     <div class="schedulify-zone-header-bar">
                         <div>
-                            <h3><?php _e('Configured Zone Rules', 'schedulify-delivery'); ?></h3>
-                            <p class="description"><?php _e('Define custom delivery matrix rules and delivery delays (hours) for specific zones.', 'schedulify-delivery'); ?></p>
+                            <h3><?php _e('Configured Zone Delivery Rules', 'schedulify-delivery'); ?></h3>
+                            <p class="description"><?php _e('Define custom delivery matrix rules for specific Bangladesh zones.', 'schedulify-delivery'); ?></p>
                         </div>
                         <button type="button" class="button button-primary schedulify-open-zone-modal" id="schedulify-btn-add-zone">
                             <span class="dashicons dashicons-plus-alt"></span> <?php _e('Add Zone Rule', 'schedulify-delivery'); ?>
@@ -911,7 +927,10 @@ class Schedulify_Settings {
                         <div class="schedulify-empty-state">
                             <span class="dashicons dashicons-location"></span>
                             <h4><?php _e('No Zone Rules Configured Yet', 'schedulify-delivery'); ?></h4>
-                            <p><?php printf(__('All zones are currently using the default rules from General Settings (with %d hours delivery delay). Click "Add Zone Rule" to create customized rules with specific delivery delays for Bogura, Dhaka, or other zones.', 'schedulify-delivery'), intval($s['delay_hours'] ?? 0)); ?></p>
+                            <p><?php printf(
+                                __('All zones are using General Settings defaults (%d hours delay). Click "Add Zone Rule" to configure custom rules for specific zones.', 'schedulify-delivery'),
+                                intval($s['delay_hours'] ?? 0)
+                            ); ?></p>
                             <button type="button" class="button button-secondary schedulify-open-zone-modal">
                                 <?php _e('+ Configure Your First Zone Rule', 'schedulify-delivery'); ?>
                             </button>
@@ -921,25 +940,24 @@ class Schedulify_Settings {
                             <table class="wp-list-table widefat fixed striped schedulify-zone-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 26%;"><?php _e('Assigned Zones', 'schedulify-delivery'); ?></th>
-                                        <th style="width: 20%;"><?php _e('Shipping Method', 'schedulify-delivery'); ?></th>
-                                        <th style="width: 18%;"><?php _e('Delivery Delay', 'schedulify-delivery'); ?></th>
-                                        <th style="width: 16%;"><?php _e('Weekly Off-Days', 'schedulify-delivery'); ?></th>
-                                        <th style="width: 12%;"><?php _e('Blackout / Ranges', 'schedulify-delivery'); ?></th>
-                                        <th style="width: 8%; text-align: right;"><?php _e('Actions', 'schedulify-delivery'); ?></th>
+                                        <th scope="col" style="width:26%"><?php _e('Assigned Zones', 'schedulify-delivery'); ?></th>
+                                        <th scope="col" style="width:22%"><?php _e('Shipping Method', 'schedulify-delivery'); ?></th>
+                                        <th scope="col" style="width:18%"><?php _e('Delivery Delay', 'schedulify-delivery'); ?></th>
+                                        <th scope="col" style="width:16%"><?php _e('Weekly Off-Days', 'schedulify-delivery'); ?></th>
+                                        <th scope="col" style="width:12%"><?php _e('Blackout / Ranges', 'schedulify-delivery'); ?></th>
+                                        <th scope="col" style="width:6%; text-align:right"><?php _e('Actions', 'schedulify-delivery'); ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php 
+                                    <?php
                                     $shipping_methods = self::get_all_woocommerce_shipping_methods();
                                     $day_short = [0 => 'Sun', 1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat'];
 
-                                    foreach ($zone_rules as $rule) : 
+                                    foreach ($zone_rules as $rule) :
                                         $r_id = $rule['id'] ?? '';
                                         $r_districts = (array)($rule['districts'] ?? []);
                                         $rule_methods = !empty($rule['methods']) && is_array($rule['methods']) ? $rule['methods'] : [];
 
-                                        // Fallback if rule['methods'] is empty
                                         if (empty($rule_methods)) {
                                             $m_key = $rule['shipping_method_id'] ?? 'all';
                                             $rule_methods[$m_key] = [
@@ -953,30 +971,32 @@ class Schedulify_Settings {
                                             ];
                                         }
 
-                                        // Formatted zone names
                                         $district_names = [];
                                         foreach ($r_districts as $dcode) {
                                             $district_names[] = $all_districts[$dcode] ?? $dcode;
                                         }
+
+                                        $delete_url = wp_nonce_url(
+                                            add_query_arg(['page' => 'schedulify-delivery', 'tab' => 'zones', 'action' => 'delete_zone_rule', 'rule_id' => $r_id], admin_url('admin.php')),
+                                            'schedulify_delete_zone_rule_' . $r_id
+                                        );
                                     ?>
                                         <tr data-rule-json="<?php echo esc_attr(wp_json_encode($rule)); ?>">
                                             <td>
                                                 <strong><?php echo esc_html(implode(', ', array_slice($district_names, 0, 5))); ?></strong>
                                                 <?php if (count($district_names) > 5) : ?>
-                                                    <span class="schedulify-badge-count">+<?php echo count($district_names) - 5; ?> more</span>
+                                                    <span class="schedulify-badge-count">+<?php echo count($district_names) - 5; ?></span>
                                                 <?php endif; ?>
                                                 <div class="row-actions">
                                                     <span class="edit"><a href="#" class="schedulify-edit-rule"><?php _e('Edit', 'schedulify-delivery'); ?></a> | </span>
                                                     <span class="delete">
-                                                        <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'schedulify-delivery', 'tab' => 'zones', 'action' => 'delete_zone_rule', 'rule_id' => $r_id], admin_url('admin.php')), 'schedulify_delete_zone_rule_' . $r_id)); ?>" class="schedulify-delete-rule">
-                                                            <?php _e('Delete', 'schedulify-delivery'); ?>
-                                                        </a>
+                                                        <a href="<?php echo esc_url($delete_url); ?>" class="schedulify-delete-rule" style="color:#b32d2e"><?php _e('Delete', 'schedulify-delivery'); ?></a>
                                                     </span>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div class="schedulify-cell-methods-list">
-                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                    <?php foreach ($rule_methods as $m_conf) :
                                                         $m_title = !empty($m_conf['shipping_method_title']) ? $m_conf['shipping_method_title'] : ($shipping_methods[$m_conf['shipping_method_id']]['title'] ?? $m_conf['shipping_method_id']);
                                                     ?>
                                                         <div class="schedulify-cell-method-item">
@@ -987,18 +1007,17 @@ class Schedulify_Settings {
                                             </td>
                                             <td>
                                                 <div class="schedulify-cell-delays-list">
-                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                    <?php foreach ($rule_methods as $m_conf) :
                                                         $m_delay = intval($m_conf['delay_hours'] ?? 0);
                                                     ?>
                                                         <div class="schedulify-cell-delay-item">
                                                             <span class="schedulify-delay-badge <?php echo $m_delay === 0 ? 'same-day' : ''; ?>">
                                                                 <span class="dashicons dashicons-clock"></span>
-                                                                <?php 
-                                                                if ($m_delay === 0) {
-                                                                    _e('0 Hours Lead', 'schedulify-delivery');
-                                                                } else {
-                                                                    printf(_n('%d Hour Delay', '%d Hours Delay', $m_delay, 'schedulify-delivery'), $m_delay);
-                                                                }
+                                                                <?php
+                                                                echo esc_html(sprintf(
+                                                                    _n('%d Hour', '%d Hours', $m_delay, 'schedulify-delivery'),
+                                                                    $m_delay
+                                                                ));
                                                                 ?>
                                                             </span>
                                                         </div>
@@ -1007,11 +1026,11 @@ class Schedulify_Settings {
                                             </td>
                                             <td>
                                                 <div class="schedulify-cell-offdays-list">
-                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                    <?php foreach ($rule_methods as $m_conf) :
                                                         $m_off_days = (array)($m_conf['off_days'] ?? []);
                                                     ?>
                                                         <div class="schedulify-cell-offday-item">
-                                                            <?php 
+                                                            <?php
                                                             if (empty($m_off_days)) {
                                                                 echo '<span class="schedulify-text-muted">' . __('Open 7 days', 'schedulify-delivery') . '</span>';
                                                             } else {
@@ -1028,7 +1047,7 @@ class Schedulify_Settings {
                                             </td>
                                             <td>
                                                 <div class="schedulify-cell-blackouts-list">
-                                                    <?php foreach ($rule_methods as $m_conf) : 
+                                                    <?php foreach ($rule_methods as $m_conf) :
                                                         $m_blackout = trim($m_conf['blackout_dates'] ?? '');
                                                         $m_ranges_count = count((array)($m_conf['disabled_date_ranges'] ?? []));
                                                         $details = [];
@@ -1041,20 +1060,14 @@ class Schedulify_Settings {
                                                         }
                                                     ?>
                                                         <div class="schedulify-cell-blackout-item">
-                                                            <?php 
-                                                            if (empty($details)) {
-                                                                echo '<span class="schedulify-text-muted">—</span>';
-                                                            } else {
-                                                                echo esc_html(implode(' • ', $details));
-                                                            }
-                                                            ?>
+                                                            <?php echo empty($details) ? '<span class="schedulify-text-muted">—</span>' : esc_html(implode(' • ', $details)); ?>
                                                         </div>
                                                     <?php endforeach; ?>
                                                 </div>
                                             </td>
-                                            <td style="text-align: right; vertical-align: middle;">
+                                            <td style="text-align:right; white-space:nowrap">
                                                 <button type="button" class="button button-small schedulify-edit-rule">
-                                                    <span class="dashicons dashicons-edit"></span> <?php _e('Edit', 'schedulify-delivery'); ?>
+                                                    <span class="dashicons dashicons-edit" style="margin-top:3px;font-size:14px;width:14px;height:14px;"></span> <?php _e('Edit', 'schedulify-delivery'); ?>
                                                 </button>
                                             </td>
                                         </tr>
@@ -1063,23 +1076,26 @@ class Schedulify_Settings {
                             </table>
                         </div>
                     <?php endif; ?>
-                </div>
-            </div>
-        </div>
+
+                </div><!-- /zone tab -->
+            </div><!-- /tabs container -->
+
+        </div><!-- /wrap -->
 
         <!-- ZONE RULE MULTI-STEP MODAL -->
-        <div id="schedulify-zone-modal" class="schedulify-modal-backdrop" style="display: none;">
+        <div id="schedulify-zone-modal" class="schedulify-modal-backdrop" style="display:none;">
             <div class="schedulify-modal-container">
+
                 <div class="schedulify-modal-header">
                     <div class="schedulify-modal-title-area">
                         <h2 id="schedulify-modal-title"><?php _e('Add Zone Delivery Rule', 'schedulify-delivery'); ?></h2>
                         <div class="schedulify-step-indicator">
                             <span class="schedulify-step-dot active" data-step="1">1. <?php _e('Select Zones', 'schedulify-delivery'); ?></span>
-                            <span class="schedulify-step-separator">➔</span>
-                            <span class="schedulify-step-dot" data-step="2">2. <?php _e('Configure Rules & Delay', 'schedulify-delivery'); ?></span>
+                            <span class="schedulify-step-separator">›</span>
+                            <span class="schedulify-step-dot" data-step="2">2. <?php _e('Configure Rules', 'schedulify-delivery'); ?></span>
                         </div>
                     </div>
-                    <button type="button" class="schedulify-modal-close" title="<?php esc_attr_e('Close Modal', 'schedulify-delivery'); ?>">&times;</button>
+                    <button type="button" class="schedulify-modal-close" title="<?php esc_attr_e('Close', 'schedulify-delivery'); ?>">&times;</button>
                 </div>
 
                 <form method="post" action="" id="schedulify-zone-rule-form">
@@ -1088,18 +1104,17 @@ class Schedulify_Settings {
                     <input type="hidden" name="rule_id" id="schedulify_rule_id" value="">
 
                     <div class="schedulify-modal-body">
+
                         <!-- STEP 1: SELECT ZONES -->
                         <div class="schedulify-modal-step active" id="schedulify-modal-step-1">
-                            <div class="schedulify-step-instruction">
-                                <div class="schedulify-district-toolbar">
-                                    <div class="schedulify-search-box">
-                                        <span class="dashicons dashicons-search"></span>
-                                        <input type="text" id="schedulify-district-search" placeholder="<?php esc_attr_e('Search zone (e.g. Bogura, Dhaka)...', 'schedulify-delivery'); ?>">
-                                    </div>
-                                    <div class="schedulify-quick-select-buttons">
-                                        <button type="button" class="button button-small" id="schedulify-select-all-districts"><?php _e('Select All', 'schedulify-delivery'); ?></button>
-                                        <button type="button" class="button button-small" id="schedulify-deselect-all-districts"><?php _e('Deselect All', 'schedulify-delivery'); ?></button>
-                                    </div>
+                            <div class="schedulify-district-toolbar">
+                                <div class="schedulify-search-box">
+                                    <span class="dashicons dashicons-search"></span>
+                                    <input type="text" id="schedulify-district-search" placeholder="<?php esc_attr_e('Search zone (e.g. Bogura, Dhaka)...', 'schedulify-delivery'); ?>">
+                                </div>
+                                <div class="schedulify-quick-select-buttons">
+                                    <button type="button" class="button button-small" id="schedulify-select-all-districts"><?php _e('Select All', 'schedulify-delivery'); ?></button>
+                                    <button type="button" class="button button-small" id="schedulify-deselect-all-districts"><?php _e('Deselect All', 'schedulify-delivery'); ?></button>
                                 </div>
                             </div>
 
@@ -1113,12 +1128,13 @@ class Schedulify_Settings {
                                         </div>
                                     </label>
                                 <?php endforeach; ?>
-                                <div class="schedulify-no-zones-available" id="schedulify-no-zones-notice" style="display: none;">
+
+                                <div class="schedulify-no-zones-available" id="schedulify-no-zones-notice" style="display:none;">
                                     <span class="dashicons dashicons-warning"></span>
                                     <h4><?php _e('No Zones Available', 'schedulify-delivery'); ?></h4>
-                                    <p><?php _e('All delivery zones have already been assigned to existing rules. To configure rules for a zone, please edit its existing rule.', 'schedulify-delivery'); ?></p>
+                                    <p><?php _e('All delivery zones have already been assigned. Edit an existing rule to update a zone.', 'schedulify-delivery'); ?></p>
                                 </div>
-                                <div class="schedulify-no-zones-available" id="schedulify-no-search-results" style="display: none;">
+                                <div class="schedulify-no-zones-available" id="schedulify-no-search-results" style="display:none;">
                                     <span class="dashicons dashicons-search"></span>
                                     <h4><?php _e('No Matching Zones Found', 'schedulify-delivery'); ?></h4>
                                     <p><?php _e('No available zones match your search query.', 'schedulify-delivery'); ?></p>
@@ -1126,15 +1142,16 @@ class Schedulify_Settings {
                             </div>
                         </div>
 
-                        <!-- STEP 2: CONFIGURE RULES & DELAY (TABBED PER SHIPPING METHOD) -->
-                        <div class="schedulify-modal-step" id="schedulify-modal-step-2" style="display: none;">
+                        <!-- STEP 2: CONFIGURE RULES (tabbed per shipping method) -->
+                        <div class="schedulify-modal-step" id="schedulify-modal-step-2" style="display:none;">
+
                             <div class="schedulify-selected-zones-pill-bar">
                                 <div class="schedulify-pill-bar-left">
                                     <span class="schedulify-pill-label"><?php _e('Applying rules to:', 'schedulify-delivery'); ?></span>
                                     <div id="schedulify-selected-zones-pills" class="schedulify-pills-list"></div>
                                 </div>
                                 <button type="button" class="button button-secondary schedulify-btn-modify-zones" id="schedulify-btn-change-zones">
-                                    <?php _e('Change / Modify Zones', 'schedulify-delivery'); ?>
+                                    <?php _e('Change Zones', 'schedulify-delivery'); ?>
                                 </button>
                             </div>
 
@@ -1145,36 +1162,38 @@ class Schedulify_Settings {
                                         <strong><?php _e('Configure Shipping Methods', 'schedulify-delivery'); ?></strong>
                                     </div>
                                     <p class="description">
-                                        <?php _e('Configure delivery delays, weekly off-days, and blackout dates for each shipping method in this zone.', 'schedulify-delivery'); ?>
+                                        <?php _e('Set delivery delays, weekly off-days, and blackout dates per shipping method for this zone.', 'schedulify-delivery'); ?>
                                     </p>
                                 </div>
 
-                                <!-- Dynamic Tab Buttons -->
                                 <div class="schedulify-method-tabs-nav" id="schedulify-method-tabs-nav">
-                                    <!-- Populated dynamically via JS -->
+                                    <!-- populated by JS -->
                                 </div>
-
-                                <!-- Dynamic Tab Panes -->
                                 <div class="schedulify-method-tabs-content" id="schedulify-method-tabs-content">
-                                    <!-- Populated dynamically via JS -->
+                                    <!-- populated by JS -->
                                 </div>
                             </div>
+
                         </div>
-                    </div>
+
+                    </div><!-- /modal-body -->
 
                     <div class="schedulify-modal-footer">
+                        <button type="button" class="button button-secondary schedulify-modal-close"><?php _e('Cancel', 'schedulify-delivery'); ?></button>
                         <button type="button" class="button button-primary" id="schedulify-modal-btn-next">
                             <?php _e('Next', 'schedulify-delivery'); ?> &rarr;
                         </button>
-                        <button type="submit" class="button button-primary" id="schedulify-modal-btn-save" style="display: none;">
+                        <button type="submit" class="button button-primary" id="schedulify-modal-btn-save" style="display:none;">
                             <?php _e('Save Rules', 'schedulify-delivery'); ?>
                         </button>
                     </div>
+
                 </form>
             </div>
         </div>
         <?php
     }
+
 }
 
 // Backward compatibility alias
