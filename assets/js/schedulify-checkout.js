@@ -383,7 +383,7 @@
     }
 
     /**
-     * Helper: Toggle enabled/disabled state of Delivery Date based on shipping availability
+     * Helper: Toggle enabled/disabled and visible/hidden state of Delivery Date based on shipping availability
      */
     function updateDeliveryFieldState() {
         const isAvailable = isShippingAvailable();
@@ -397,6 +397,7 @@
         const altInput = flatpickrInstance ? flatpickrInstance.altInput : null;
 
         if (!isAvailable) {
+            $wrapper.hide().css('display', 'none');
             $displayInput.prop('disabled', true).addClass('schedulify-disabled').attr('placeholder', noShippingPlaceholder);
             if (altInput) {
                 $(altInput).prop('disabled', true).addClass('schedulify-disabled').attr('placeholder', noShippingPlaceholder);
@@ -415,6 +416,7 @@
                 flatpickrInstance.close();
             }
         } else {
+            $wrapper.show().css('display', 'block');
             $displayInput.prop('disabled', false).removeClass('schedulify-disabled').attr('placeholder', defaultPlaceholder);
             if (altInput) {
                 $(altInput).prop('disabled', false).removeClass('schedulify-disabled').attr('placeholder', defaultPlaceholder);
@@ -734,8 +736,8 @@
             $('#schedulify-block-fallback-container').hide();
         }
 
-        $wrapper.css('display', 'block').show();
         initFlatpickr();
+        updateDeliveryFieldState();
         return !needsMove;
     }
 
