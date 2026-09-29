@@ -5,7 +5,7 @@
  * Description:       Advanced delivery date scheduler for WooCommerce with zone-specific delivery matrix rules, cut-off delay hours, weekly off-days, and custom holiday blackout controls.
  * Version:           1.0.0
  * Author:            Ali Hasan
- * Author URI:        https://boomdevs.com/
+ * Author URI:        https://github.com/alihasandeveloper/
  * License:           GPLv2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       schedulify-delivery
