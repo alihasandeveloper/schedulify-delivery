@@ -1,174 +1,92 @@
 /**
- * Schedulify Multi-Step Checkout Styles
- * Version: 3.0.0
+ * Schedulify Dynamic District Reveal Styles
+ * Automatically reveals Shipping Methods, Delivery Date Scheduler & Payment Options
+ * as soon as customer selects a District.
+ * Version: 4.0.0
  */
 
-:root {
-    --schedulify-primary: #3b82f6;
-    --schedulify-primary-hover: #2563eb;
-    --schedulify-primary-light: #eff6ff;
-    --schedulify-success: #10b981;
-    --schedulify-danger: #ef4444;
-    --schedulify-text-main: #111827;
-    --schedulify-text-muted: #6b7280;
-    --schedulify-border-color: #e5e7eb;
-    --schedulify-bg-gray: #f9fafb;
-    --schedulify-radius: 8px;
-}
-
 /* ==========================================================================
-   1. Block Checkout Step Visibility Control (Foolproof CSS Isolation)
+   1. Dynamic Reveal State Controls
    ========================================================================== */
 
-/* --- STEP 1 ACTIVE: Strictly HIDE all Step 2 elements --- */
-body.schedulify-step-1-active fieldset.wc-block-checkout__shipping-options,
-body.schedulify-step-1-active .wc-block-checkout__shipping-option,
-body.schedulify-step-1-active .wc-block-checkout__shipping-methods,
-body.schedulify-step-1-active .wc-block-components-shipping-rates-control,
-body.schedulify-step-1-active [data-block-name*="shipping-methods"],
-body.schedulify-step-1-active [data-block-name*="shipping-method"],
-body.schedulify-step-1-active .wp-block-woocommerce-checkout-shipping-methods-block,
-body.schedulify-step-1-active .wp-block-woocommerce-checkout-shipping-method-block,
-body.schedulify-step-1-active #schedulify-delivery-scheduler-wrapper,
-body.schedulify-step-1-active #schedulify-block-fallback-container,
-body.schedulify-step-1-active #schedulify-delivery-field-container,
-body.schedulify-step-1-active .schedulify-checkout-field-container,
-body.schedulify-step-1-active fieldset.wc-block-checkout__payment-methods,
-body.schedulify-step-1-active .wc-block-checkout__payment-methods,
-body.schedulify-step-1-active .wc-block-components-checkout-payment-methods-block,
-body.schedulify-step-1-active [data-block-name*="payment"],
-body.schedulify-step-1-active .wp-block-woocommerce-checkout-payment-block,
-body.schedulify-step-1-active .wp-block-woocommerce-checkout-payment-methods-block,
-body.schedulify-step-1-active .wc-block-checkout__actions,
-body.schedulify-step-1-active .wc-block-components-checkout-place-order-button,
-body.schedulify-step-1-active [data-block-name*="actions"],
-body.schedulify-step-1-active .wp-block-woocommerce-checkout-actions-block,
-body.schedulify-step-1-active #schedulify-block-back-top-container,
-body.schedulify-step-1-active .schedulify-step-2-only {
+/* --- NO DISTRICT SELECTED: Hide Shipping, Calendar, Payment & Place Order --- */
+body.schedulify-district-pending fieldset.wc-block-checkout__shipping-options,
+body.schedulify-district-pending .wc-block-checkout__shipping-option,
+body.schedulify-district-pending .wc-block-checkout__shipping-methods,
+body.schedulify-district-pending .wc-block-components-shipping-rates-control,
+body.schedulify-district-pending [data-block-name*="shipping-methods"],
+body.schedulify-district-pending [data-block-name*="shipping-method"],
+body.schedulify-district-pending .wp-block-woocommerce-checkout-shipping-methods-block,
+body.schedulify-district-pending .wp-block-woocommerce-checkout-shipping-method-block,
+body.schedulify-district-pending #schedulify-delivery-scheduler-wrapper,
+body.schedulify-district-pending #schedulify-block-fallback-container,
+body.schedulify-district-pending #schedulify-delivery-field-container,
+body.schedulify-district-pending .schedulify-checkout-field-container,
+body.schedulify-district-pending fieldset.wc-block-checkout__payment-methods,
+body.schedulify-district-pending .wc-block-checkout__payment-methods,
+body.schedulify-district-pending .wc-block-components-checkout-payment-methods-block,
+body.schedulify-district-pending [data-block-name*="payment"],
+body.schedulify-district-pending .wp-block-woocommerce-checkout-payment-block,
+body.schedulify-district-pending .wp-block-woocommerce-checkout-payment-methods-block,
+body.schedulify-district-pending .wc-block-checkout__actions,
+body.schedulify-district-pending .wc-block-components-checkout-place-order-button,
+body.schedulify-district-pending [data-block-name*="actions"],
+body.schedulify-district-pending .wp-block-woocommerce-checkout-actions-block,
+body.schedulify-district-pending #order_review_heading,
+body.schedulify-district-pending #order_review,
+body.schedulify-district-pending .woocommerce-checkout-review-order {
     display: none !important;
 }
 
-/* --- STEP 2 ACTIVE: Strictly HIDE all Step 1 elements --- */
-body.schedulify-step-2-active .wc-block-checkout__contact-information,
-body.schedulify-step-2-active .wc-block-components-checkout-contact-information-block,
-body.schedulify-step-2-active [data-block-name*="contact-information"],
-body.schedulify-step-2-active .wp-block-woocommerce-checkout-contact-information-block,
-body.schedulify-step-2-active .wc-block-checkout__shipping-fields,
-body.schedulify-step-2-active .wc-block-components-checkout-shipping-address-block,
-body.schedulify-step-2-active [data-block-name*="shipping-address"],
-body.schedulify-step-2-active .wp-block-woocommerce-checkout-shipping-address-block,
-body.schedulify-step-2-active fieldset.wc-block-checkout__shipping-fields,
-body.schedulify-step-2-active .wc-block-checkout__billing-fields,
-body.schedulify-step-2-active .wc-block-components-checkout-billing-address-block,
-body.schedulify-step-2-active [data-block-name*="billing-address"],
-body.schedulify-step-2-active .wp-block-woocommerce-checkout-billing-address-block,
-body.schedulify-step-2-active fieldset.wc-block-checkout__billing-fields,
-body.schedulify-step-2-active .wc-block-checkout__additional-fields,
-body.schedulify-step-2-active .wc-block-components-checkout-additional-fields-block,
-body.schedulify-step-2-active [data-block-name*="additional-fields"],
-body.schedulify-step-2-active [data-block-name*="order-notes"],
-body.schedulify-step-2-active .wp-block-woocommerce-checkout-additional-fields-block,
-body.schedulify-step-2-active #schedulify-block-next-container,
-body.schedulify-step-2-active .schedulify-step-1-only {
-    display: none !important;
+/* --- DISTRICT SELECTED: Reveal Smoothly --- */
+body.schedulify-district-selected fieldset.wc-block-checkout__shipping-options,
+body.schedulify-district-selected .wc-block-checkout__shipping-option,
+body.schedulify-district-selected .wc-block-checkout__shipping-methods,
+body.schedulify-district-selected .wc-block-components-shipping-rates-control,
+body.schedulify-district-selected [data-block-name*="shipping-methods"],
+body.schedulify-district-selected [data-block-name*="shipping-method"],
+body.schedulify-district-selected #schedulify-delivery-scheduler-wrapper,
+body.schedulify-district-selected fieldset.wc-block-checkout__payment-methods,
+body.schedulify-district-selected .wc-block-checkout__payment-methods,
+body.schedulify-district-selected .wc-block-components-checkout-payment-methods-block,
+body.schedulify-district-selected [data-block-name*="payment"],
+body.schedulify-district-selected .wc-block-checkout__actions,
+body.schedulify-district-selected .wc-block-components-checkout-place-order-button,
+body.schedulify-district-selected [data-block-name*="actions"],
+body.schedulify-district-selected #order_review_heading,
+body.schedulify-district-selected #order_review,
+body.schedulify-district-selected .woocommerce-checkout-review-order {
+    animation: schedulify-fade-in 0.35s ease forwards;
 }
 
-/* Fallback helpers */
-.schedulify-block-hidden,
-.schedulify-is-hidden {
-    display: none !important;
-}
-
-/* ==========================================================================
-   2. Action Buttons & Top Back Button
-   ========================================================================== */
-.schedulify-step-actions {
-    margin-top: 24px;
-    margin-bottom: 24px;
-}
-
-.schedulify-step-top-nav {
-    margin-top: 4px;
-    margin-bottom: 24px;
-}
-
-/* Next & Back Buttons */
-.schedulify-btn-next,
-.schedulify-btn-back,
-.schedulify-btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    color: #ffffff !important;
-    font-size: 16px !important;
-    font-weight: 400 !important;
-    padding: 16px 20px !important;
-    border: none !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease-in-out !important;
-    text-decoration: none !important;
-    background: #661716 !important;
-    font-family: inherit !important;
-    line-height: 1.2 !important;
-}
-
-.schedulify-btn-next:hover,
-.schedulify-btn:hover,
-.schedulify-btn-back:hover {
-    background-color: #d07126 !important;
-    color: #ffffff !important;
-}
-
-
-.schedulify-btn-back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    border: none;
-    color: var(--schedulify-primary);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 6px 0;
-    transition: all 0.2s ease;
-    text-decoration: none;
-}
-
-.schedulify-btn-back-link:hover {
-    color: var(--schedulify-primary-hover);
-    text-decoration: underline;
+@keyframes schedulify-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ==========================================================================
-   3. Classic Checkout Specifics
-   ========================================================================== */
-.schedulify-step-content {
-    display: none;
-}
-
-.schedulify-step-content.active {
-    display: block;
-}
-
-/* ==========================================================================
-   4. Validation Errors Highlighting
+   2. Validation Errors & Hints
    ========================================================================== */
 .schedulify-validation-error,
 .wc-block-components-combobox.schedulify-validation-error input,
 .wc-block-components-combobox.schedulify-validation-error,
 .wc-block-components-state-input.schedulify-validation-error select,
 .wc-block-components-text-input.schedulify-validation-error input {
-    border-color: var(--schedulify-danger) !important;
+    border-color: #ef4444 !important;
     background-color: #fff8f8 !important;
-    outline: 1.5px solid var(--schedulify-danger) !important;
+    outline: 1.5px solid #ef4444 !important;
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
 }
 
 .schedulify-error-notice {
     background-color: #fef2f2;
-    border-left: 4px solid var(--schedulify-danger);
+    border-left: 4px solid #ef4444;
     padding: 12px 16px;
     margin-bottom: 20px;
     border-radius: 6px;
@@ -177,13 +95,4 @@ body.schedulify-step-2-active .schedulify-step-1-only {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-/* ==========================================================================
-   5. Mobile Responsiveness
-   ========================================================================== */
-@media (max-width: 640px) {
-    .schedulify-btn-next {
-        width: 100% !important;
-    }
 }
