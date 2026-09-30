@@ -604,22 +604,20 @@
 
         if (!flatpickrInstance) return;
 
-        if (!shippingReady) {
+        if (!shippingReady || forceClear) {
+            userSelectedDate = null;
+            $('#schedulify_delivery_date').val('');
+            $('#schedulify_delivery_date_display').val('');
             flatpickrInstance.clear();
-            return;
+            if (forceClear) {
+                syncWithSession();
+            }
+            if (!shippingReady) return;
         }
 
         const minDate = getEarliestAllowedDate();
         flatpickrInstance.set('minDate', minDate);
         flatpickrInstance.set('disable', [function (date) { return !isDateAllowed(date); }]);
-
-        if (forceClear) {
-            userSelectedDate = null;
-            $('#schedulify_delivery_date').val('');
-            flatpickrInstance.clear();
-            syncWithSession();
-            return;
-        }
 
         // Check if user has already selected a date
         const currentDateStr = $('#schedulify_delivery_date').val() || userSelectedDate;
@@ -630,6 +628,7 @@
             if (!isDateAllowed(dateObj)) {
                 userSelectedDate = null;
                 $('#schedulify_delivery_date').val('');
+                $('#schedulify_delivery_date_display').val('');
                 flatpickrInstance.clear();
                 syncWithSession();
             } else {
@@ -855,24 +854,39 @@
             }
         }, 300);
 
+        let lastKnownDistrict = detectCurrentDistrictCode();
+        let lastKnownMethod = detectCurrentShippingMethod();
+
         // Debounce timer for district/method change events
         let ruleRefreshTimer = null;
-        function debouncedRefreshCalendarRules(delay) {
+        function debouncedRefreshCalendarRules(delay, forceClear = false) {
             const wait = (typeof delay === 'number') ? delay : 100;
             clearTimeout(ruleRefreshTimer);
             ruleRefreshTimer = setTimeout(function () {
-                refreshCalendarRules();
+                refreshCalendarRules(forceClear);
             }, wait);
         }
 
         // Listen for district / state / city changes on checkout (both Classic and Block Checkout)
         $(document).on('change input select', '#billing_state, #shipping_state, #billing_city, #shipping_city, select[id*="state"], select[id*="district"], input[id*="state"], input[id*="district"], select[name*="state"], select[name*="district"], input[name*="state"], input[name*="district"], .wc-block-components-state-input select, .wc-block-components-state-input input, .wc-block-components-combobox input, .wc-block-components-combobox__input', function () {
-            debouncedRefreshCalendarRules(80);
+            const curDist = detectCurrentDistrictCode();
+            if (curDist !== lastKnownDistrict) {
+                lastKnownDistrict = curDist;
+                debouncedRefreshCalendarRules(80, true);
+            } else {
+                debouncedRefreshCalendarRules(80, false);
+            }
         });
 
         // Listen for shipping method changes on checkout (both Classic and Block Checkout)
         $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"], .wc-block-components-radio-control, .wc-block-components-radio-control__input, .wc-block-components-radio-control__option, .wc-block-components-radio-control__label, [data-block-name="woocommerce/checkout-shipping-methods-block"]', function () {
-            debouncedRefreshCalendarRules(80);
+            const curMethod = detectCurrentShippingMethod();
+            if (curMethod !== lastKnownMethod) {
+                lastKnownMethod = curMethod;
+                debouncedRefreshCalendarRules(80, true);
+            } else {
+                debouncedRefreshCalendarRules(80, false);
+            }
         });
 
         // Subscribe to WooCommerce Gutenberg Blocks store state changes
@@ -888,12 +902,19 @@
                     const curMethod = detectCurrentShippingMethod();
                     const curDistrict = detectCurrentDistrictCode();
                     const curShippingState = isShippingAvailable();
+
+                    const methodChanged = (curMethod !== lastDetectedMethod && lastDetectedMethod !== '');
+                    const districtChanged = (curDistrict !== lastDetectedDistrict && lastDetectedDistrict !== '');
+
                     if (curMethod !== lastDetectedMethod || curDistrict !== lastDetectedDistrict || curShippingState !== lastShippingState || (lastIsCalculating === true && isCalculating === false)) {
+                        const shouldReset = methodChanged || districtChanged;
                         lastDetectedMethod = curMethod;
                         lastDetectedDistrict = curDistrict;
+                        lastKnownMethod = curMethod;
+                        lastKnownDistrict = curDistrict;
                         lastShippingState = curShippingState;
                         lastIsCalculating = isCalculating;
-                        debouncedRefreshCalendarRules(50);
+                        debouncedRefreshCalendarRules(50, shouldReset);
                     }
                 } catch (e) { }
             });
