@@ -85,8 +85,8 @@
         // 1. Classic Checkout inputs / selects
         const $shipState = $('#shipping_state:visible, #shipping_state');
         const $billState = $('#billing_state:visible, #billing_state');
-        const $shipCity  = $('#shipping_city:visible, #shipping_city');
-        const $billCity  = $('#billing_city:visible, #billing_city');
+        const $shipCity = $('#shipping_city:visible, #shipping_city');
+        const $billCity = $('#billing_city:visible, #billing_city');
 
         if ($shipState.length && $shipState.val()) {
             raw = $shipState.val();
@@ -121,11 +121,11 @@
                     const customer = typeof cartStore.getCustomerData === 'function' ? cartStore.getCustomerData() : null;
 
                     raw = (customer && customer.shippingAddress && customer.shippingAddress.state) ||
-                          (customer && customer.billingAddress && customer.billingAddress.state) ||
-                          (cart && cart.shippingAddress && cart.shippingAddress.state) ||
-                          (cart && cart.billingAddress && cart.billingAddress.state) ||
-                          (customer && customer.shippingAddress && customer.shippingAddress.city) ||
-                          (cart && cart.shippingAddress && cart.shippingAddress.city) || '';
+                        (customer && customer.billingAddress && customer.billingAddress.state) ||
+                        (cart && cart.shippingAddress && cart.shippingAddress.state) ||
+                        (cart && cart.billingAddress && cart.billingAddress.state) ||
+                        (customer && customer.shippingAddress && customer.shippingAddress.city) ||
+                        (cart && cart.shippingAddress && cart.shippingAddress.city) || '';
                 }
             } catch (e) { }
         }
@@ -334,17 +334,17 @@
             let ruleDelay, ruleOffDays, ruleRanges, ruleBlackout, ruleAllowed;
 
             if (matchedMethod) {
-                ruleDelay    = matchedMethod.delay_hours !== undefined ? Math.max(0, parseInt(matchedMethod.delay_hours, 10)) : generalDelay;
-                ruleOffDays  = matchedMethod.off_days !== undefined && Array.isArray(matchedMethod.off_days) ? matchedMethod.off_days : generalOffDays;
-                ruleRanges   = matchedMethod.disabled_date_ranges !== undefined && Array.isArray(matchedMethod.disabled_date_ranges) ? matchedMethod.disabled_date_ranges : generalRanges;
+                ruleDelay = matchedMethod.delay_hours !== undefined ? Math.max(0, parseInt(matchedMethod.delay_hours, 10)) : generalDelay;
+                ruleOffDays = matchedMethod.off_days !== undefined && Array.isArray(matchedMethod.off_days) ? matchedMethod.off_days : generalOffDays;
+                ruleRanges = matchedMethod.disabled_date_ranges !== undefined && Array.isArray(matchedMethod.disabled_date_ranges) ? matchedMethod.disabled_date_ranges : generalRanges;
                 ruleBlackout = matchedMethod.blackout_dates !== undefined ? String(matchedMethod.blackout_dates) : generalBlackout;
-                ruleAllowed  = matchedMethod.allowed_dates !== undefined ? String(matchedMethod.allowed_dates) : generalAllowed;
+                ruleAllowed = matchedMethod.allowed_dates !== undefined ? String(matchedMethod.allowed_dates) : generalAllowed;
             } else {
-                ruleDelay    = foundRule.delay_hours !== undefined ? Math.max(0, parseInt(foundRule.delay_hours, 10)) : generalDelay;
-                ruleOffDays  = foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays;
-                ruleRanges   = foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges;
+                ruleDelay = foundRule.delay_hours !== undefined ? Math.max(0, parseInt(foundRule.delay_hours, 10)) : generalDelay;
+                ruleOffDays = foundRule.off_days && foundRule.off_days.length > 0 ? foundRule.off_days : generalOffDays;
+                ruleRanges = foundRule.disabled_date_ranges && foundRule.disabled_date_ranges.length > 0 ? foundRule.disabled_date_ranges : generalRanges;
                 ruleBlackout = foundRule.blackout_dates !== undefined ? String(foundRule.blackout_dates) : generalBlackout;
-                ruleAllowed  = foundRule.allowed_dates !== undefined ? String(foundRule.allowed_dates) : generalAllowed;
+                ruleAllowed = foundRule.allowed_dates !== undefined ? String(foundRule.allowed_dates) : generalAllowed;
             }
 
             currentActiveRule = {
@@ -375,7 +375,7 @@
      */
     function getEarliestAllowedDate() {
         const delayHours = Math.max(0, parseInt(currentActiveRule.delay_hours || 0, 10));
-        
+
         let baseDate;
         if (serverTime && serverTime.date) {
             const dateParts = String(serverTime.date).split('-').map(Number);
@@ -455,7 +455,7 @@
                             }
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
             // If shipping container exists in DOM and no method detected, shipping is not ready
@@ -647,6 +647,13 @@
         const inputEl = document.getElementById('schedulify_delivery_date_display');
         if (!inputEl || typeof flatpickr === 'undefined') {
             return;
+        }
+
+        if (flatpickrInstance && flatpickrInstance.input !== inputEl) {
+            try {
+                flatpickrInstance.destroy();
+            } catch (e) { }
+            flatpickrInstance = null;
         }
 
         if (inputEl._flatpickr) {
@@ -850,28 +857,22 @@
 
         // Debounce timer for district/method change events
         let ruleRefreshTimer = null;
-        function debouncedRefreshCalendarRules() {
+        function debouncedRefreshCalendarRules(delay) {
+            const wait = (typeof delay === 'number') ? delay : 100;
             clearTimeout(ruleRefreshTimer);
-            refreshCalendarRules();
             ruleRefreshTimer = setTimeout(function () {
                 refreshCalendarRules();
-            }, 100);
-            setTimeout(function () {
-                refreshCalendarRules();
-            }, 350);
-            setTimeout(function () {
-                refreshCalendarRules();
-            }, 800);
+            }, wait);
         }
 
         // Listen for district / state / city changes on checkout (both Classic and Block Checkout)
         $(document).on('change input select', '#billing_state, #shipping_state, #billing_city, #shipping_city, select[id*="state"], select[id*="district"], input[id*="state"], input[id*="district"], select[name*="state"], select[name*="district"], input[name*="state"], input[name*="district"], .wc-block-components-state-input select, .wc-block-components-state-input input, .wc-block-components-combobox input, .wc-block-components-combobox__input', function () {
-            debouncedRefreshCalendarRules();
+            debouncedRefreshCalendarRules(80);
         });
 
         // Listen for shipping method changes on checkout (both Classic and Block Checkout)
         $(document).on('change click input', 'input[name^="shipping_method"], .woocommerce-shipping-methods input[type="radio"], select[name^="shipping_method"], .wc-block-components-shipping-rates-control input[type="radio"], .wc-block-components-radio-control, .wc-block-components-radio-control__input, .wc-block-components-radio-control__option, .wc-block-components-radio-control__label, [data-block-name="woocommerce/checkout-shipping-methods-block"]', function () {
-            debouncedRefreshCalendarRules();
+            debouncedRefreshCalendarRules(80);
         });
 
         // Subscribe to WooCommerce Gutenberg Blocks store state changes
@@ -892,9 +893,9 @@
                         lastDetectedDistrict = curDistrict;
                         lastShippingState = curShippingState;
                         lastIsCalculating = isCalculating;
-                        refreshCalendarRules();
+                        debouncedRefreshCalendarRules(50);
                     }
-                } catch (e) {}
+                } catch (e) { }
             });
         }
 
@@ -931,21 +932,24 @@
             }, 150);
         });
 
-        const targetNode = document.querySelector('.wp-block-woocommerce-checkout, .wc-block-checkout, form.checkout, body');
+        const targetNode = document.querySelector('.wp-block-woocommerce-checkout, .wc-block-checkout, form.checkout');
         if (targetNode) {
             observer.observe(targetNode, { childList: true, subtree: true });
         }
 
-        // Re-init and update rules on AJAX completes and WooCommerce events
+        // Re-init and update rules on AJAX completes and WooCommerce events (ignore schedulify session sync)
         $(document).ajaxComplete(function (event, xhr, settings) {
-            if (settings && settings.url && (settings.url.includes('wc/store') || settings.url.includes('woocommerce') || settings.url.includes('admin-ajax.php'))) {
-                debouncedRefreshCalendarRules();
+            if (settings && settings.data && typeof settings.data === 'string' && settings.data.indexOf('schedulify_update_session') !== -1) {
+                return;
+            }
+            if (settings && settings.url && (settings.url.includes('wc/store') || settings.url.includes('woocommerce') || settings.url.includes('wc-ajax=update_order_review'))) {
+                debouncedRefreshCalendarRules(100);
             }
         });
 
-        $(document.body).on('updated_checkout updated_shipping_method update_checkout', function () {
+        $(document.body).on('updated_checkout updated_shipping_method', function () {
             mountToBlockCheckout();
-            debouncedRefreshCalendarRules();
+            debouncedRefreshCalendarRules(100);
         });
 
         // Intercept Place Order button click to validate Delivery Date
@@ -965,7 +969,7 @@
 
                 $('.schedulify-date-error-notice').remove();
                 const noticeHtml = '<div class="schedulify-error-notice schedulify-date-error-notice" style="margin-top:10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> <span>' + (i18n.selectDate || 'Please select a delivery date for your order.') + '</span></div>';
-                
+
                 $scheduler.after(noticeHtml);
 
                 if ($scheduler.length) {

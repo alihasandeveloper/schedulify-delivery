@@ -7,6 +7,16 @@ class Schedulify_Settings {
 
     private static $instance = null;
     private $settings_key = 'schedulify_delivery_settings';
+    private static $cached_settings = null;
+    private static $cached_shipping_methods = null;
+
+    public static function flush_cache() {
+        self::$cached_settings = null;
+        self::$cached_shipping_methods = null;
+        if (class_exists('Schedulify_DB')) {
+            Schedulify_DB::flush_cache();
+        }
+    }
 
     public static function get_instance() {
         if (null === self::$instance) {
@@ -23,10 +33,16 @@ class Schedulify_Settings {
     }
 
     public static function get_settings() {
+        if (null !== self::$cached_settings) {
+            return self::$cached_settings;
+        }
+
         if (class_exists('Schedulify_DB')) {
-            return Schedulify_DB::get_all_settings();
+            self::$cached_settings = Schedulify_DB::get_all_settings();
+            return self::$cached_settings;
         } elseif (class_exists('schedulify_DB')) {
-            return schedulify_DB::get_all_settings();
+            self::$cached_settings = schedulify_DB::get_all_settings();
+            return self::$cached_settings;
         }
 
         $defaults = [
@@ -46,7 +62,8 @@ class Schedulify_Settings {
         if (empty($saved)) {
             $saved = get_option('schedulify_settings', []);
         }
-        return wp_parse_args($saved, $defaults);
+        self::$cached_settings = wp_parse_args($saved, $defaults);
+        return self::$cached_settings;
     }
 
     public function add_admin_menu() {
@@ -210,6 +227,10 @@ class Schedulify_Settings {
      * Get all active WooCommerce Shipping Methods dynamically from Shipping Zones
      */
     public static function get_all_woocommerce_shipping_methods() {
+        if (null !== self::$cached_shipping_methods) {
+            return self::$cached_shipping_methods;
+        }
+
         $methods = [];
 
         if (class_exists('WC_Shipping_Zones')) {
@@ -400,6 +421,7 @@ class Schedulify_Settings {
             }
         }
 
+        self::$cached_shipping_methods = $methods;
         return $methods;
     }
 

@@ -92,11 +92,19 @@ class Schedulify_Matrix_Calculator {
         $earliest_allowed_timestamp = $now_utc + ( $this->delay_hours * 3600 );
         $earliest_allowed_ymd = function_exists('wp_date') ? wp_date('Y-m-d', $earliest_allowed_timestamp) : date('Y-m-d', $earliest_allowed_timestamp);
 
+        // Pre-flip arrays into lookup hash maps for O(1) lookup speed
+        $allowed_map   = !empty($this->allowed_dates) ? array_flip($this->allowed_dates) : [];
+        $off_days_map  = !empty($this->off_days) ? array_flip($this->off_days) : [];
+        $holidays_map  = !empty($this->holidays) ? array_flip($this->holidays) : [];
+        $disabled_map  = !empty($this->disabled_ranges) ? array_flip($this->disabled_ranges) : [];
+
         $standard_matrix = [];
+        $base_timestamp = strtotime($today_ymd . ' 00:00:00');
 
         for ( $i = 0; $i <= $this->max_days; $i++ ) {
-            $ymd = date('Y-m-d', strtotime("{$today_ymd} +{$i} day"));
-            $day_of_week = intval(date('w', strtotime($ymd)));
+            $curr_time = $base_timestamp + ( $i * 86400 );
+            $ymd = date('Y-m-d', $curr_time);
+            $day_of_week = intval(date('w', $curr_time));
 
             // If this date is before the earliest allowed delivery date (due to delay hours), it's not available
             if ( $ymd < $earliest_allowed_ymd ) {
@@ -105,25 +113,25 @@ class Schedulify_Matrix_Calculator {
             }
 
             // Allowed dates override any off-day or holiday restriction
-            if ( in_array( $ymd, $this->allowed_dates, true ) ) {
+            if ( isset( $allowed_map[ $ymd ] ) ) {
                 $standard_matrix[ $ymd ] = true;
                 continue;
             }
 
             // Check weekly off-days
-            if ( in_array( $day_of_week, $this->off_days, true ) ) {
+            if ( isset( $off_days_map[ $day_of_week ] ) ) {
                 $standard_matrix[ $ymd ] = false;
                 continue;
             }
 
             // Check blackout dates
-            if ( in_array( $ymd, $this->holidays, true ) ) {
+            if ( isset( $holidays_map[ $ymd ] ) ) {
                 $standard_matrix[ $ymd ] = false;
                 continue;
             }
 
             // Check disabled date ranges
-            if ( in_array( $ymd, $this->disabled_ranges, true ) ) {
+            if ( isset( $disabled_map[ $ymd ] ) ) {
                 $standard_matrix[ $ymd ] = false;
                 continue;
             }

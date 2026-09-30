@@ -62,12 +62,18 @@ final class Schedulify_Delivery {
 
     private function init_hooks() {
         add_action('plugins_loaded', [$this, 'on_plugins_loaded']);
-        add_action('plugins_loaded', [$this, 'check_db_updates'], 5); // Run before on_plugins_loaded (priority 5)
+        if (is_admin()) {
+            add_action('admin_init', [$this, 'check_db_updates']);
+        }
         add_action('init', [$this, 'load_textdomain']);
         register_activation_hook(SCHEDULIFY_PLUGIN_FILE, [$this, 'activate']);
     }
 
     public function check_db_updates() {
+        if (!is_admin() || !current_user_can('manage_woocommerce')) {
+            return;
+        }
+
         // Static guard: run only once per request
         static $checked = false;
         if ($checked) {

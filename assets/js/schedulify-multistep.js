@@ -24,12 +24,28 @@
             // Bind change listeners on all district/state inputs and comboboxes
             this.bindEvents();
 
-            // Observe dynamic Gutenberg Block Checkout mutations
-            var observer = new MutationObserver(function () {
-                self.evaluateDistrict();
+            // Observe dynamic Gutenberg Block Checkout mutations with debounce
+            var debounceMutation = null;
+            var observer = new MutationObserver(function (mutations) {
+                var isRelevant = false;
+                for (var i = 0; i < mutations.length; i++) {
+                    var target = mutations[i].target;
+                    if (target && !$(target).closest('.flatpickr-calendar, #schedulify-delivery-scheduler-wrapper').length) {
+                        isRelevant = true;
+                        break;
+                    }
+                }
+                if (!isRelevant) {
+                    return;
+                }
+
+                clearTimeout(debounceMutation);
+                debounceMutation = setTimeout(function () {
+                    self.evaluateDistrict();
+                }, 100);
             });
 
-            var targetNode = document.querySelector('.wc-block-checkout, .wp-block-woocommerce-checkout, form.woocommerce-checkout, body');
+            var targetNode = document.querySelector('.wc-block-checkout, .wp-block-woocommerce-checkout, form.woocommerce-checkout');
             if (targetNode) {
                 observer.observe(targetNode, { childList: true, subtree: true });
             }
@@ -37,25 +53,37 @@
 
         bindEvents: function () {
             var self = this;
+            var debounceTimer = null;
+
+            function debouncedEvaluate() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function () {
+                    self.evaluateDistrict();
+                }, 80);
+            }
 
             // Listen to all possible district/state change events
-            $(document).on('change input select', 'select[id*="state"], select[id*="district"], input[id*="state"], input[id*="district"], .wc-block-components-state-input select, .wc-block-components-combobox__input, .wc-block-components-combobox input, #shipping_state, #billing_state, #shipping_city, #billing_city', function () {
-                setTimeout(function () {
-                    self.evaluateDistrict();
-                }, 50);
-            });
+            $(document).on('change input select', 'select[id*="state"], select[id*="district"], input[id*="state"], input[id*="district"], .wc-block-components-state-input select, .wc-block-components-combobox__input, .wc-block-components-combobox input, #shipping_state, #billing_state, #shipping_city, #billing_city', debouncedEvaluate);
 
-            // Subscribe to Gutenberg store if available
+            // Subscribe to Gutenberg store if available (only evaluate if state actually changes)
             if (window.wp && window.wp.data && typeof window.wp.data.subscribe === 'function') {
+                var lastStoreDistrict = null;
                 window.wp.data.subscribe(function () {
-                    self.evaluateDistrict();
+                    var curDistrict = self.detectSelectedDistrict();
+                    if (curDistrict !== lastStoreDistrict) {
+                        lastStoreDistrict = curDistrict;
+                        debouncedEvaluate();
+                    }
                 });
             }
 
-            // Also check on AJAX complete
+            // Also check on AJAX complete (ignore internal schedulify session calls to prevent loops)
             $(document).ajaxComplete(function (event, xhr, settings) {
+                if (settings && settings.data && typeof settings.data === 'string' && settings.data.indexOf('schedulify_update_session') !== -1) {
+                    return;
+                }
                 if (settings && settings.url && (settings.url.includes('wc/store') || settings.url.includes('woocommerce'))) {
-                    self.evaluateDistrict();
+                    debouncedEvaluate();
                 }
             });
         },
@@ -96,7 +124,7 @@
                             districtCode = cart.shippingAddress.state;
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
             return districtCode;
@@ -156,9 +184,6 @@
             $revealElements.each(function () {
                 $(this).show().css('display', '');
             });
-
-            // Trigger shipping recalculation
-            $(document.body).trigger('update_checkout');
         },
 
         /**

@@ -9,6 +9,16 @@ if (!defined('ABSPATH')) {
 
 class Schedulify_DB {
 
+    private static $cached_general_settings = null;
+    private static $cached_zone_rules = null;
+    private static $cached_all_settings = null;
+
+    public static function flush_cache() {
+        self::$cached_general_settings = null;
+        self::$cached_zone_rules = null;
+        self::$cached_all_settings = null;
+    }
+
     public static function get_settings_table() {
         global $wpdb;
         return $wpdb->prefix . 'schedulify_settings';
@@ -72,6 +82,7 @@ class Schedulify_DB {
 
         // Auto-migrate legacy data from wp_options or older schedulify tables if exists
         self::maybe_migrate_legacy_data();
+        self::flush_cache();
     }
 
     /**
@@ -169,6 +180,10 @@ class Schedulify_DB {
      * Get General Settings
      */
     public static function get_general_settings() {
+        if (null !== self::$cached_general_settings) {
+            return self::$cached_general_settings;
+        }
+
         global $wpdb;
         $table = self::get_settings_table();
 
@@ -187,6 +202,7 @@ class Schedulify_DB {
         // Ensure table exists
         $results = $wpdb->get_results("SELECT setting_key, setting_value FROM {$table}", OBJECT_K);
         if (empty($results)) {
+            self::$cached_general_settings = $defaults;
             return $defaults;
         }
 
@@ -200,7 +216,9 @@ class Schedulify_DB {
             }
         }
 
-        return wp_parse_args($settings, $defaults);
+        $merged = wp_parse_args($settings, $defaults);
+        self::$cached_general_settings = $merged;
+        return $merged;
     }
 
     /**
@@ -223,6 +241,11 @@ class Schedulify_DB {
             );
         }
 
+        self::flush_cache();
+        if (class_exists('Schedulify_Settings')) {
+            Schedulify_Settings::flush_cache();
+        }
+
         // Also keep updated option for convenience
         update_option('schedulify_delivery_settings', self::get_all_settings());
 
@@ -233,11 +256,16 @@ class Schedulify_DB {
      * Get all Zone Delivery Rules
      */
     public static function get_zone_rules() {
+        if (null !== self::$cached_zone_rules) {
+            return self::$cached_zone_rules;
+        }
+
         global $wpdb;
         $table = self::get_zone_rules_table();
 
         $rows = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id ASC", ARRAY_A);
         if (empty($rows)) {
+            self::$cached_zone_rules = [];
             return [];
         }
 
@@ -274,6 +302,7 @@ class Schedulify_DB {
             ];
         }
 
+        self::$cached_zone_rules = $rules;
         return $rules;
     }
 
@@ -337,6 +366,11 @@ class Schedulify_DB {
             $wpdb->insert($table, $data, $format);
         }
 
+        self::flush_cache();
+        if (class_exists('Schedulify_Settings')) {
+            Schedulify_Settings::flush_cache();
+        }
+
         update_option('schedulify_delivery_settings', self::get_all_settings());
         return $rule_uid;
     }
@@ -354,6 +388,11 @@ class Schedulify_DB {
             ['%s']
         );
 
+        self::flush_cache();
+        if (class_exists('Schedulify_Settings')) {
+            Schedulify_Settings::flush_cache();
+        }
+
         update_option('schedulify_delivery_settings', self::get_all_settings());
         return false !== $deleted;
     }
@@ -362,9 +401,14 @@ class Schedulify_DB {
      * Get combined settings array for backward compatibility
      */
     public static function get_all_settings() {
+        if (null !== self::$cached_all_settings) {
+            return self::$cached_all_settings;
+        }
+
         $general = self::get_general_settings();
         $zone_rules = self::get_zone_rules();
         $general['zone_rules'] = $zone_rules;
+        self::$cached_all_settings = $general;
         return $general;
     }
 }

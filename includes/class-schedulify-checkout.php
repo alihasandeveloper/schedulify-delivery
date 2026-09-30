@@ -6,6 +6,13 @@ if (!defined('ABSPATH')) {
 class Schedulify_Checkout {
 
     private static $instance = null;
+    private static $cached_matrices = null;
+    private static $cached_effective_rules = [];
+
+    public static function flush_cache() {
+        self::$cached_matrices = null;
+        self::$cached_effective_rules = [];
+    }
 
     public static function get_instance() {
         if (null === self::$instance) {
@@ -100,7 +107,6 @@ class Schedulify_Checkout {
      * Find matched rule for a specific district code and shipping method, or fallback to general settings
      */
     public static function get_effective_rule_for_district($district_code = null, $shipping_method_id = null) {
-        $settings = Schedulify_Settings::get_settings();
         if (null === $district_code) {
             $district_code = self::get_customer_district_code();
         }
@@ -108,6 +114,12 @@ class Schedulify_Checkout {
             $shipping_method_id = self::get_customer_shipping_method();
         }
 
+        $cache_key = ($district_code ?: 'empty') . '|' . ($shipping_method_id ?: 'empty');
+        if (isset(self::$cached_effective_rules[$cache_key])) {
+            return self::$cached_effective_rules[$cache_key];
+        }
+
+        $settings = Schedulify_Settings::get_settings();
         $zone_rules = (array)($settings['zone_rules'] ?? []);
         $found_rule = null;
 
@@ -156,7 +168,7 @@ class Schedulify_Checkout {
                 $rule_allowed  = isset($found_rule['allowed_dates']) ? (string)$found_rule['allowed_dates'] : ($settings['allowed_dates'] ?? '');
             }
 
-            return [
+            $result = [
                 'source'                => 'zone_rule',
                 'id'                    => $found_rule['id'] ?? '',
                 'shipping_method_id'    => $matched_method_conf['shipping_method_id'] ?? ($found_rule['shipping_method_id'] ?? 'all'),
@@ -169,10 +181,12 @@ class Schedulify_Checkout {
                 'allowed_dates'         => $rule_allowed,
                 'max_advance_days'      => intval($settings['max_advance_days'] ?? 56),
             ];
+            self::$cached_effective_rules[$cache_key] = $result;
+            return $result;
         }
 
         // Fallback to General Settings
-        return [
+        $fallback = [
             'source'                => 'general',
             'id'                    => 'general_default',
             'shipping_method_id'    => 'all',
@@ -185,12 +199,18 @@ class Schedulify_Checkout {
             'allowed_dates'         => $settings['allowed_dates'] ?? '',
             'max_advance_days'      => intval($settings['max_advance_days'] ?? 56),
         ];
+        self::$cached_effective_rules[$cache_key] = $fallback;
+        return $fallback;
     }
 
     /**
      * Get precalculated matrices for all configured rules and general settings
      */
     public static function get_all_matrices() {
+        if (null !== self::$cached_matrices) {
+            return self::$cached_matrices;
+        }
+
         $settings = Schedulify_Settings::get_settings();
         $zone_rules = (array)($settings['zone_rules'] ?? []);
         $matrices = [];
@@ -227,6 +247,7 @@ class Schedulify_Checkout {
             $matrices[$rule_id] = $rule_calc->get_delivery_availability_matrix();
         }
 
+        self::$cached_matrices = $matrices;
         return $matrices;
     }
 
